@@ -3045,6 +3045,315 @@ st.markdown(r"""
 </style>
 """, unsafe_allow_html=True)
 
+
+# ============================================================
+# RECRUITER-READY RESPONSIVE LAYOUT
+# Final mobile/tablet safety layer. Kept last so it overrides
+# older fixed-width rules without changing desktop behaviour.
+# ============================================================
+st.markdown(r"""
+<style>
+
+/* ---------- GLOBAL WIDTH SAFETY ---------- */
+html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"],
+[data-testid="stMainBlockContainer"], .main, .block-container {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+}
+*, *::before, *::after {
+    box-sizing: border-box !important;
+}
+img, svg, video, canvas {
+    max-width: 100% !important;
+    height: auto;
+}
+iframe {
+    max-width: 100% !important;
+}
+p, span, div, label, h1, h2, h3, h4, h5, h6 {
+    overflow-wrap: anywhere;
+}
+[data-testid="stHorizontalBlock"] {
+    max-width: 100% !important;
+}
+
+/* Prevent custom cards/panels from forcing viewport width */
+.landing-hero, .hero, .hero-card, .guide-card, .glass-card,
+.metric-card, .research-org-index, .research-compare-row,
+.people-scope-banner, .panel, .card, .workspace-card {
+    max-width: 100% !important;
+    min-width: 0 !important;
+}
+
+/* Tables may scroll instead of clipping the whole page */
+[data-testid="stDataFrame"],
+[data-testid="stTable"],
+[data-testid="stDataEditor"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+}
+
+/* Inputs and buttons must remain inside the screen */
+[data-testid="stTextInput"],
+[data-testid="stTextArea"],
+[data-testid="stSelectbox"],
+[data-testid="stMultiSelect"],
+[data-testid="stNumberInput"],
+[data-testid="stDateInput"],
+[data-testid="stFileUploader"],
+[data-testid="stButton"],
+[data-testid="stDownloadButton"] {
+    max-width: 100% !important;
+    min-width: 0 !important;
+}
+.stButton > button,
+.stDownloadButton > button {
+    max-width: 100% !important;
+    white-space: normal !important;
+    min-height: 42px;
+    line-height: 1.25 !important;
+}
+
+/* ---------- TABLET ---------- */
+@media (max-width: 900px) {
+    [data-testid="stMainBlockContainer"],
+    .main .block-container,
+    .block-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 22px !important;
+        padding-right: 22px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+
+    .landing-hero {
+        width: 100% !important;
+        max-width: 760px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+    }
+
+    .landing-hero h1,
+    .hero h1 {
+        font-size: clamp(34px, 7vw, 54px) !important;
+        line-height: 1.04 !important;
+        letter-spacing: -0.035em !important;
+        max-width: 100% !important;
+    }
+
+    /* Let Streamlit columns wrap instead of crushing content */
+    [data-testid="stHorizontalBlock"] {
+        flex-wrap: wrap !important;
+        gap: 12px !important;
+    }
+    [data-testid="column"] {
+        min-width: 220px !important;
+        flex: 1 1 220px !important;
+    }
+
+    .research-compare-row {
+        grid-template-columns: 1fr 1fr !important;
+    }
+}
+
+/* ---------- PHONE ---------- */
+@media (max-width: 600px) {
+    [data-testid="stMainBlockContainer"],
+    .main .block-container,
+    .block-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 14px !important;
+        padding-right: 14px !important;
+        padding-top: 18px !important;
+        margin: 0 auto !important;
+    }
+
+    /* LANDING */
+    .landing-hero {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 14px 0 8px 0 !important;
+        margin: 0 auto !important;
+        text-align: center !important;
+    }
+    .landing-hero h1,
+    .hero h1,
+    h1 {
+        font-size: clamp(29px, 9vw, 40px) !important;
+        line-height: 1.05 !important;
+        letter-spacing: -0.035em !important;
+        max-width: 100% !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+    }
+    .landing-hero p,
+    .hero p {
+        font-size: 14px !important;
+        line-height: 1.55 !important;
+        max-width: 100% !important;
+        padding: 0 3px !important;
+    }
+
+    /* Stack every Streamlit column on phones */
+    [data-testid="stHorizontalBlock"] {
+        display: flex !important;
+        flex-direction: column !important;
+        flex-wrap: nowrap !important;
+        gap: 10px !important;
+        width: 100% !important;
+    }
+    [data-testid="column"] {
+        width: 100% !important;
+        min-width: 0 !important;
+        flex: 1 1 auto !important;
+    }
+
+    /* Guides */
+    .guide-card {
+        width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+        padding: 14px !important;
+        margin-bottom: 8px !important;
+    }
+    .guide-card-heading {
+        margin-bottom: 9px !important;
+    }
+    .guide-card-title {
+        font-size: 14px !important;
+    }
+    .guide-card-body {
+        font-size: 13px !important;
+        line-height: 1.5 !important;
+    }
+
+    /* Companies / research / people */
+    .research-org-index {
+        min-height: 0 !important;
+        width: 100% !important;
+    }
+    .research-compare-row {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+    .research-compare-badge {
+        text-align: left !important;
+        width: fit-content !important;
+        max-width: 100% !important;
+    }
+    .people-scope-banner {
+        width: 100% !important;
+    }
+
+    /* Forms */
+    input, textarea, select {
+        max-width: 100% !important;
+        font-size: 16px !important; /* prevents iOS input zoom */
+    }
+    [data-baseweb="select"] {
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    /* File upload / chat */
+    [data-testid="stFileUploader"] section {
+        max-width: 100% !important;
+        min-width: 0 !important;
+        padding: 12px !important;
+    }
+    [data-testid="stChatInput"] {
+        max-width: 100% !important;
+    }
+    [data-testid="stBottomBlockContainer"] {
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+        background: #020805 !important;
+    }
+
+    /* Top nav/action areas: wrap rather than clip */
+    .topbar, .top-nav, .nav-row, .quick-actions {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+
+    /* Expanders/cards */
+    [data-testid="stExpander"],
+    [data-testid="stAlert"],
+    [data-testid="stMetric"] {
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    /* More readable mobile typography */
+    h2 { font-size: 23px !important; line-height: 1.18 !important; }
+    h3 { font-size: 18px !important; line-height: 1.25 !important; }
+    h4 { font-size: 15px !important; line-height: 1.3 !important; }
+
+    /* Sidebar remains usable when opened on mobile */
+    section[data-testid="stSidebar"] {
+        max-width: min(86vw, 320px) !important;
+    }
+}
+
+/* ---------- SMALL PHONE ---------- */
+@media (max-width: 390px) {
+    [data-testid="stMainBlockContainer"],
+    .main .block-container,
+    .block-container {
+        padding-left: 11px !important;
+        padding-right: 11px !important;
+    }
+    .landing-hero h1,
+    .hero h1,
+    h1 {
+        font-size: 28px !important;
+        line-height: 1.06 !important;
+    }
+    .landing-hero p,
+    .hero p {
+        font-size: 13px !important;
+    }
+    .stButton > button,
+    .stDownloadButton > button {
+        font-size: 13px !important;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+}
+
+/* ---------- VERY SMALL PHONE ---------- */
+@media (max-width: 350px) {
+    .landing-hero h1,
+    .hero h1,
+    h1 {
+        font-size: 25px !important;
+    }
+    [data-testid="stMainBlockContainer"],
+    .main .block-container,
+    .block-container {
+        padding-left: 9px !important;
+        padding-right: 9px !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ============================================================
 # HELPERS
 # ============================================================
