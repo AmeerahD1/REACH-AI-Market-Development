@@ -1564,6 +1564,76 @@ div[data-testid="stHorizontalBlock"] button p {
 </style>
 """, unsafe_allow_html=True)
 
+
+# ============================================================
+# REACH RESPONSIVE HOTFIX — recruiter portfolio
+# ============================================================
+st.markdown(r"""
+<style>
+html,body,.stApp{overflow-x:hidden!important}
+img,svg,video,canvas{max-width:100%!important;height:auto}
+.table-shell,.people-results,.recommend-table,[data-testid="stDataFrame"]{max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+
+@media(max-width:1180px){
+.block-container{padding-left:1.2rem!important;padding-right:1.2rem!important}
+.kpi6{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.home-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.filter-grid,.metrics4,.pipeline{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.coverage-grid,.outreach-layout{grid-template-columns:1fr!important}
+}
+
+@media(max-width:820px){
+.block-container{width:100%!important;max-width:100%!important;padding:.8rem!important}
+section[data-testid="stSidebar"]{min-width:min(86vw,290px)!important;max-width:min(86vw,290px)!important}
+.landing-links,.nav-sign{display:none!important}
+.landing-nav{height:56px!important;margin:0!important;gap:8px!important}
+.brand{font-size:16px!important;white-space:nowrap!important}.nav-actions{margin-left:auto!important}
+.landing-hero{width:100%!important;max-width:100%!important;min-width:0!important;min-height:auto!important;padding:36px 0 40px!important;margin:0 auto!important;overflow:hidden!important}
+.landing-hero:before{width:100vw!important;max-width:100vw!important;top:-90px!important}
+.landing-hero h1{width:100%!important;max-width:100%!important;padding:0 4px!important;font-size:clamp(36px,9.5vw,50px)!important;line-height:1.04!important;letter-spacing:-2px!important;text-wrap:balance!important;overflow-wrap:normal!important;word-break:normal!important}
+.landing-hero p{width:100%!important;max-width:650px!important;padding:0 5px!important;font-size:13px!important;line-height:1.65!important}
+.hero-actions{width:100%!important;max-width:390px!important;flex-direction:column!important;align-items:stretch!important;margin:20px auto 0!important}
+.hero-primary,.hero-secondary{width:100%!important;min-height:44px!important;text-align:center!important;font-size:11px!important;padding:12px 14px!important}
+.hero-demo{width:100%!important;max-width:100%!important;margin-top:28px!important}
+.demo-grid{grid-template-columns:1fr!important;min-height:auto!important}.demo-side{display:none!important}.demo-content{min-width:0!important;padding:12px!important}
+.demo-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}.demo-table{overflow-x:auto!important}.demo-row{min-width:430px!important}
+.market-entry-card,div[data-testid="stForm"]{width:100%!important;max-width:100%!important}
+.market-entry-top{grid-template-columns:1fr!important;gap:18px!important}.market-entry-copy{padding-right:0!important;border-right:0!important}
+.market-entry-benefits{grid-template-columns:1fr!important}.market-benefit:first-child{grid-row:auto!important}
+.app-top{height:auto!important;grid-template-columns:1fr!important;gap:8px!important}.global-search{width:100%!important;min-width:0!important}.top-icons{justify-content:flex-start!important;flex-wrap:wrap!important}
+.kpi6,.metrics4,.pipeline,.home-grid,.filter-grid,.ready-layout,.outreach-layout,.coverage-grid{grid-template-columns:1fr!important}
+.home-grid>.home-card:last-child{grid-column:auto!important}
+.toolbar,.status-tabs,.workspace-tabs,.mini-tabs{max-width:100%!important;overflow-x:auto!important;flex-wrap:nowrap!important;padding-bottom:5px!important;-webkit-overflow-scrolling:touch}
+.toolbar>*,.status-tabs>*,.workspace-tabs>*,.mini-tabs>*{flex:0 0 auto!important}.tool.push{margin-left:0!important}
+.people-layout{grid-template-columns:1fr!important;min-height:0!important}.filters{display:block!important;border-right:0!important;border-bottom:1px solid rgba(255,255,255,.06)!important}
+.company-head,.company-row{min-width:700px!important}.people-head,.people-row{min-width:680px!important}.rec-row{min-width:720px!important}
+.seq-line{grid-template-columns:52px 34px minmax(0,1fr)!important;gap:9px!important}.seq-state{grid-column:2/-1!important;text-align:left!important}
+.chart{overflow-x:auto!important}.bars,.bar-labels{min-width:520px!important}
+}
+
+@media(max-width:600px){
+html,body,.stApp,[data-testid="stAppViewContainer"],[data-testid="stMain"]{width:100%!important;max-width:100%!important;overflow-x:hidden!important}
+.block-container{width:100%!important;max-width:100%!important;padding:.65rem 14px 3rem!important;margin:0!important}
+.landing-nav{width:100%!important;max-width:100%!important;height:54px!important;padding:0 2px!important;overflow:hidden!important}
+.brand{font-size:15px!important;flex:0 0 auto!important}.nav-cta{font-size:9px!important;padding:8px 9px!important;white-space:nowrap!important}
+.landing-hero{padding:30px 0 36px!important}
+.eyebrow-pill{max-width:calc(100vw - 50px)!important;white-space:normal!important;font-size:8px!important;line-height:1.35!important}
+.landing-hero h1{font-size:clamp(33px,10.2vw,42px)!important;line-height:1.04!important;letter-spacing:-1.6px!important;margin:16px auto 14px!important;padding:0 2px!important}
+.landing-hero p{max-width:350px!important;font-size:12px!important;line-height:1.6!important;margin-left:auto!important;margin-right:auto!important}
+.hero-actions{max-width:350px!important}
+.market-entry-card{padding:17px 13px 12px!important}.market-entry-title{font-size:22px!important}div[data-testid="stForm"]{padding:7px 13px 15px!important}
+.page-title,.home-title{font-size:27px!important;overflow-wrap:break-word!important}.page-sub,.home-sub{font-size:12px!important}
+.kpi,.metricbox,.pipeline-card,.home-card,.surface,.overview-card,.score-card,.sequence,.coming{min-width:0!important;max-width:100%!important}
+.activity-item,.task-item,.quick-item{grid-template-columns:32px minmax(0,1fr)!important;gap:9px!important}
+.activity-item em,.task-item em{grid-column:2!important;justify-self:start!important}
+.stButton>button,[data-testid="stFormSubmitButton"] button{min-height:44px!important;white-space:normal!important}
+[data-testid="stTextInput"] input,[data-testid="stTextArea"] textarea,[data-baseweb="select"]>div{font-size:16px!important}
+.closing h1{font-size:34px!important}.closing p{font-size:12px!important;line-height:1.6!important}.closing-globe{width:135px!important;height:135px!important}
+}
+</style>
+""", unsafe_allow_html=True)
+
+
 # ============================================================
 # HELPERS
 # ============================================================
@@ -3628,7 +3698,7 @@ elif st.session_state.page == "People":
     s1, s2 = st.columns([1.4, 4.6])
     with s1:
         search_people = st.button(
-            "Find people with Hunter →",
+            "Find people →",
             type="primary",
             use_container_width=True,
             key="hunter_find_people"
@@ -3650,7 +3720,7 @@ elif st.session_state.page == "People":
         elif not st.session_state.market_results:
             st.error("No companies are available yet. Build your market first.")
         else:
-            with st.spinner("Searching Hunter for professional contacts..."):
+            with st.spinner("Finding sample professional contacts..."):
                 found, errors = find_people_for_companies(
                     st.session_state.market_results,
                     max_companies=5,
