@@ -1634,6 +1634,90 @@ html,body,.stApp,[data-testid="stAppViewContainer"],[data-testid="stMain"]{width
 """, unsafe_allow_html=True)
 
 
+
+# ============================================================
+# FINAL MOBILE HERO WIDTH FIX
+# Uses the actual Streamlit content width rather than viewport width.
+# ============================================================
+st.markdown(r"""
+<style>
+@media (max-width: 600px) {
+    /* Streamlit's own nested containers must be allowed to shrink. */
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"],
+    [data-testid="stMainBlockContainer"],
+    .block-container,
+    .landing-hero {
+        min-width: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: clip !important;
+    }
+
+    .landing-hero {
+        box-sizing: border-box !important;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    /* Override all earlier viewport-based headline sizing. */
+    .landing-hero h1 {
+        box-sizing: border-box !important;
+        display: block !important;
+        width: auto !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin: 16px 0 14px !important;
+        padding: 0 !important;
+        font-size: 32px !important;
+        line-height: 1.08 !important;
+        letter-spacing: -1.25px !important;
+        text-align: center !important;
+        white-space: normal !important;
+        overflow-wrap: normal !important;
+        word-break: normal !important;
+    }
+
+    .landing-hero h1 .green,
+    .landing-hero h1 span {
+        white-space: normal !important;
+    }
+
+    .landing-hero p {
+        box-sizing: border-box !important;
+        width: auto !important;
+        max-width: 340px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        padding: 0 !important;
+    }
+
+    .eyebrow-pill {
+        box-sizing: border-box !important;
+        max-width: 100% !important;
+    }
+
+    .hero-actions {
+        box-sizing: border-box !important;
+        width: 100% !important;
+        max-width: 340px !important;
+    }
+}
+
+@media (max-width: 380px) {
+    .landing-hero h1 {
+        font-size: 29px !important;
+        letter-spacing: -1px !important;
+    }
+    .landing-hero {
+        padding-left: 7px !important;
+        padding-right: 7px !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+
 # ============================================================
 # HELPERS
 # ============================================================
