@@ -4074,31 +4074,226 @@ elif st.session_state.page == "AI":
     ask = st.button("✦ Ask REACH AI →", type="primary", key="reach_ai_submit")
 
     if ask and user_prompt.strip():
-        # Portfolio demo: generate a deterministic local preview instead of
-        # calling OpenAI. This cannot consume API credits.
+        # Portfolio demo: local conversational simulation only.
+        # No OpenAI/Hunter/Companies House/Supabase call is made here.
+        prompt = user_prompt.strip()
+        lower = prompt.lower()
+        history = st.session_state.reach_ai_messages
+
         target_roles = (analysis.get("decision_makers") or [])[:3]
         segments = (analysis.get("customer_segments") or [])[:3]
-        selected_text = company_context or "a selected organisation"
-        if "outreach" in user_prompt.lower() or "email" in user_prompt.lower():
-            answer = (
-                "Demo response: A strong first message would briefly explain the problem you solve, "
-                f"connect it to {selected_text}, and ask for a short conversation rather than making a hard sell. "
-                "In the production version, REACH AI can draft this using verified organisation context."
+        product_name = analysis.get("product_name") or "your solution"
+        problem = analysis.get("problem_solved") or product_description or "a business problem"
+        selected_text = company_context or (segments[0] if segments else "a target organisation")
+        role_text = target_roles[0] if target_roles else "the relevant decision-maker"
+
+        # Find the most recent assistant answer so follow-up instructions can
+        # revise it instead of behaving like a one-shot chatbot.
+        previous_answer = ""
+        for old_message in reversed(history):
+            if old_message.get("role") == "assistant":
+                previous_answer = old_message.get("content", "")
+                break
+
+        def outreach_email(short=False, less_salesy=False, save_time=False, formal=False):
+            subject = (
+                f"Quick question about {selected_text}"
+                if less_salesy
+                else f"Reducing admin and improving workflow at {selected_text}"
             )
-        elif "target" in user_prompt.lower():
+            opening = (
+                f"Hi {role_text},\n\n"
+                f"I’m reaching out about {product_name}. "
+            )
+            if save_time:
+                body = (
+                    f"It is designed to help teams spend less time on repetitive admin while addressing {problem}. "
+                )
+            else:
+                body = (
+                    f"It is designed to help organisations address {problem}. "
+                )
+
+            if less_salesy:
+                close = (
+                    "I thought it could be relevant to your team, so I wanted to ask whether this is an area "
+                    "you are currently looking at.\n\n"
+                    "If useful, I’d be happy to share a short overview.\n\nBest,\nAmeerah"
+                )
+            elif formal:
+                close = (
+                    "Based on your role, I thought this may be relevant to your current priorities. "
+                    "Would you be open to a brief conversation to explore whether it could be useful?\n\n"
+                    "Kind regards,\nAmeerah"
+                )
+            else:
+                close = (
+                    "I thought this could be relevant to your team. Would you be open to a short conversation "
+                    "to see whether it could help?\n\nBest,\nAmeerah"
+                )
+
+            if short:
+                return (
+                    f"**Subject: {subject}**\n\n"
+                    f"Hi {role_text},\n\n"
+                    f"I’m reaching out about {product_name}, which helps teams address {problem}"
+                    + (" while reducing repetitive admin." if save_time else ".")
+                    + "\n\nWould you be open to a quick chat to see if it could be relevant to your team?"
+                    "\n\nBest,\nAmeerah"
+                )
+            return f"**Subject: {subject}**\n\n{opening}{body}{close}"
+
+        # Follow-up editing intents. These deliberately use conversation history,
+        # giving the portfolio demo a genuine multi-turn feel without a paid LLM.
+        is_followup = bool(previous_answer)
+        if is_followup and any(x in lower for x in [
+            "shorter", "shorten", "more concise", "less wordy"
+        ]):
+            answer = outreach_email(
+                short=True,
+                less_salesy=("less sales" in lower),
+                save_time=("time" in lower or "save" in lower)
+            )
+        elif is_followup and any(x in lower for x in [
+            "less salesy", "less sales", "more natural", "friendlier", "more human"
+        ]):
+            answer = outreach_email(
+                less_salesy=True,
+                save_time=("time" in lower or "save" in lower)
+            )
+        elif is_followup and any(x in lower for x in [
+            "more formal", "professional", "more professional"
+        ]):
+            answer = outreach_email(formal=True)
+        elif is_followup and any(x in lower for x in [
+            "mention", "include", "add"
+        ]) and ("time" in lower or "save" in lower or "admin" in lower):
+            answer = outreach_email(save_time=True)
+        elif is_followup and any(x in lower for x in [
+            "more detailed", "more detail", "longer", "expand", "elaborate",
+            "explain the benefits", "more benefits", "add more", "more information"
+        ]):
+            # Expand the previous outreach using the current market context.
+            # If the user mentions vets/veterinary, infer demo context locally.
+            vet_context = any(x in lower for x in ["vet", "vets", "veterinary"]) or any(
+                x in previous_answer.lower() for x in ["vet", "veterinary"]
+            )
+            if vet_context or "vet" in prompt.lower():
+                answer = (
+                    "**Subject: Helping your veterinary team reduce post-consultation admin**\\n\\n"
+                    "Hi Practice Manager,\\n\\n"
+                    "I’m reaching out about **VetScribe**, a veterinary workflow tool designed to help "
+                    "practices reduce the time spent turning consultations into structured clinical notes "
+                    "and clear owner summaries.\\n\\n"
+                    "Veterinary teams often have to balance patient care with a significant amount of "
+                    "documentation after each consultation. VetScribe is designed to support that workflow "
+                    "by helping turn consultation information into organised draft notes, while keeping the "
+                    "vet in control of reviewing and finalising the record.\\n\\n"
+                    "The aim is to reduce repetitive admin, make documentation more consistent and give vets "
+                    "more time to focus on patients and clients rather than paperwork. It can also help create "
+                    "clearer owner-facing summaries after a consultation.\\n\\n"
+                    "I thought this could be relevant to your practice and would be interested to understand "
+                    "how your team currently manages consultation notes and whether reducing that admin burden "
+                    "is something you are looking at.\\n\\n"
+                    "Would you be open to a short conversation or demo?\\n\\n"
+                    "Best,\\nAmeerah"
+                )
+            else:
+                answer = (
+                    f"**Subject: Exploring a potential workflow improvement for {selected_text}**\\n\\n"
+                    f"Hi {role_text},\\n\\n"
+                    f"I’m reaching out about **{product_name}**, which is designed to help organisations "
+                    f"address **{problem}**.\\n\\n"
+                    "The idea is to reduce unnecessary manual work, make the process more consistent and give "
+                    "teams a clearer way to manage the task from start to finish. Rather than adding another "
+                    "disconnected tool, the focus is on supporting the existing workflow and making the useful "
+                    "next action easier to identify.\\n\\n"
+                    f"Based on the current REACH market context, I thought this could be relevant to "
+                    f"**{selected_text}** and particularly to someone responsible for **{role_text}**.\\n\\n"
+                    "Would you be open to a short conversation to see whether this is relevant to your team?\\n\\n"
+                    "Best,\\nAmeerah"
+                )
+        elif is_followup and any(x in lower for x in [
+            "change", "rewrite", "revise", "improve it", "edit it"
+        ]):
             answer = (
-                "Demo response: Prioritise the customer segments shown in your Market Strategy"
-                + (f" — {', '.join(segments)}" if segments else "")
-                + (f". Relevant decision-maker roles include {', '.join(target_roles)}." if target_roles else ".")
+                "Of course — I can revise it. In this portfolio demo I can make the outreach **shorter, "
+                "less salesy, more professional, more natural, or emphasise time/admin savings**. "
+                "Tell me which change you want and I’ll update the message."
+            )
+        elif any(x in lower for x in ["outreach", "email", "message", "write to", "draft"]):
+            if any(x in lower for x in ["vet", "vets", "veterinary", "practice manager"]):
+                answer = (
+                    "**Subject: Reducing admin after veterinary consultations**\\n\\n"
+                    "Hi Practice Manager,\\n\\n"
+                    "I’m reaching out about **VetScribe**, a tool designed to help veterinary teams turn "
+                    "consultation information into structured clinical notes and clear owner summaries. "
+                    "The aim is to reduce repetitive post-consultation admin while keeping the vet in control "
+                    "of reviewing and finalising the record.\\n\\n"
+                    "I thought this could be relevant to your practice. Would you be open to a short "
+                    "conversation to see whether it could help your team?\\n\\n"
+                    "Best,\\nAmeerah"
+                )
+            else:
+                answer = outreach_email(
+                    short=("short" in lower or "concise" in lower),
+                    less_salesy=("less sales" in lower or "natural" in lower),
+                    save_time=("save time" in lower or "saves time" in lower or "admin" in lower),
+                    formal=("formal" in lower or "professional" in lower)
+                )
+        elif "target" in lower or "decision maker" in lower or "who should" in lower:
+            segment_text = ", ".join(segments) if segments else "the customer segments in your Market Strategy"
+            role_list = ", ".join(target_roles) if target_roles else "the operational or commercial decision-maker"
+            answer = (
+                f"Start with **{segment_text}**. Within those organisations, I would look for **{role_list}**. "
+                "Those roles are closest to the problem REACH has identified, so they are the most sensible "
+                "people to research before preparing outreach."
+            )
+        elif any(x in lower for x in ["next best", "what next", "next step", "what should i do"]):
+            if not st.session_state.get("market_results"):
+                answer = (
+                    "Your next best action is to **build the market first**. That gives REACH a set of sample "
+                    "organisations to qualify, research and use in the rest of the workflow."
+                )
+            elif not st.session_state.get("people_results"):
+                answer = (
+                    "You already have organisations in the market. Next, open **People** and identify the "
+                    "relevant decision-maker roles for the strongest-fit organisations before preparing outreach."
+                )
+            else:
+                answer = (
+                    "You have organisations and people available, so the next step is to **prioritise the strongest "
+                    "fit, tailor an outreach message, and move the opportunity into the appropriate REACH status**."
+                )
+        elif any(x in lower for x in ["improve", "approach", "stuck", "help me"]):
+            answer = (
+                "I’d focus on three things: narrow the first outreach to the clearest customer problem, contact "
+                "the role most directly affected by it, and use a low-friction call to action such as a short "
+                "conversation rather than a hard sell. You can also ask me to rewrite the last message in a "
+                "different tone or make it shorter."
+            )
+        elif any(x in lower for x in ["why", "explain"]):
+            answer = (
+                f"REACH is using the current demo context for **{product_name}**. The goal is to connect the "
+                f"problem — {problem} — to the most relevant organisation and decision-maker before outreach, "
+                "rather than sending the same generic message to everyone."
             )
         else:
-            answer = (
-                "Demo response: Your next step is to review the discovered organisations, research fit, "
-                "identify the appropriate decision-maker roles, and only then prepare outreach. "
-                "This portfolio environment uses sample data and does not call external AI services."
-            )
+            if previous_answer:
+                answer = (
+                    "Yes — I can keep working on the previous response with you. Tell me what you want changed "
+                    "in your own words. For example, you can ask for **more detail, a different tone, a stronger "
+                    "opening or CTA, more emphasis on a benefit, a shorter version, or a complete rewrite**."
+                )
+            else:
+                answer = (
+                    "I can help using the current REACH demo context. Tell me what you are trying to achieve — "
+                    "for example, ask me to draft outreach, identify who to target, improve an approach or suggest "
+                    "the next best action."
+                )
+
         st.session_state.reach_ai_messages.append(
-            {"role": "user", "content": user_prompt.strip()}
+            {"role": "user", "content": prompt}
         )
         st.session_state.reach_ai_messages.append(
             {"role": "assistant", "content": answer}
@@ -4118,7 +4313,9 @@ elif st.session_state.page == "AI":
     else:
         st.caption(
             "REACH AI uses your current product and market context automatically. "
-            "It will not invent contact details or pretend unverified research is real."
+            "Ask a follow-up such as “make it shorter”, “make it less salesy” or "
+            "“mention that it saves time”. Portfolio demo responses are generated locally "
+            "and do not call external AI services."
         )
 
 elif st.session_state.page == "Research":
