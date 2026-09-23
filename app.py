@@ -30,6 +30,18 @@ st.set_page_config(
 # REQUIRED SESSION STATE — initialise before any page uses it
 # ============================================================
 _COMPANY_STATE_DEFAULTS = {
+    "show_reach_guide": True,
+    "reach_tour_active": False,
+    "reach_tour_step": 1,
+    "selected_company_names": [],
+    "research_target_names": [],
+    "research_scope": "selected",
+    "demo_research_results": {},
+
+
+    "show_companies_guide": True,
+    "show_research_guide": True,
+
     "company_view_mode": "Default",
     "company_status_filter": "All companies",
     "selected_company_index": None,
@@ -70,6 +82,10 @@ DEFAULTS = {
     "post_auth_page": "Home",
     "product_id": None,
     "strategy_id": None,
+    # Public-demo REACH AI chat history. Stored only in this Streamlit session.
+    "reach_ai_chats": {},
+    "reach_ai_active_chat": None,
+    "reach_ai_chat_counter": 0,
 }
 
 for key, value in DEFAULTS.items():
@@ -1718,6 +1734,1317 @@ st.markdown(r"""
 """, unsafe_allow_html=True)
 
 
+
+st.markdown("""
+<style>
+/* REACH AI saved-chat navigation */
+section[data-testid="stSidebar"] div[data-baseweb="select"] > div{
+    background:#06120c !important;
+    border-color:#153c2a !important;
+}
+section[data-testid="stSidebar"] div[data-baseweb="select"] span{
+    color:#dce7e1 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ============================================================
+# REACH AI — CHATGPT-STYLE COMPOSER / DARK LAYOUT FIX
+# ============================================================
+st.markdown(r"""
+<style>
+/* Streamlit places st.chat_input in its own bottom container.
+   Match that container to REACH instead of leaving Streamlit's light strip. */
+[data-testid="stBottomBlockContainer"]{
+    background:#020b07 !important;
+    border-top:1px solid rgba(255,255,255,.055) !important;
+    box-shadow:0 -12px 28px rgba(0,0,0,.22) !important;
+    padding-top:10px !important;
+    padding-bottom:14px !important;
+}
+
+/* Keep the composer aligned with the main workspace on desktop. */
+@media (min-width:901px){
+    [data-testid="stBottomBlockContainer"]{
+        left:250px !important;
+        width:calc(100% - 250px) !important;
+    }
+    [data-testid="stBottomBlockContainer"] > div{
+        max-width:1180px !important;
+        margin:0 auto !important;
+        padding-left:1rem !important;
+        padding-right:1rem !important;
+    }
+}
+
+/* Dark REACH chat composer. */
+[data-testid="stChatInput"]{
+    background:#07150e !important;
+    border:1px solid rgba(96,255,166,.22) !important;
+    border-radius:14px !important;
+    box-shadow:none !important;
+}
+[data-testid="stChatInput"] textarea{
+    color:#edf7f0 !important;
+    caret-color:#2EEA7A !important;
+    background:transparent !important;
+}
+[data-testid="stChatInput"] textarea::placeholder{
+    color:#71847a !important;
+    opacity:1 !important;
+}
+[data-testid="stChatInput"] button{
+    color:#2EEA7A !important;
+}
+
+/* Give messages breathing room above the fixed composer without creating
+   the huge empty white area seen in the previous build. */
+[data-testid="stMainBlockContainer"]{
+    padding-bottom:7.5rem !important;
+}
+
+/* REACH AI chat bubbles: readable, compact and consistent with the product. */
+[data-testid="stChatMessage"]{
+    background:#07130d !important;
+    border:1px solid rgba(255,255,255,.055) !important;
+    border-radius:12px !important;
+    padding:12px 14px !important;
+    margin:8px 0 !important;
+}
+[data-testid="stChatMessage"] p,
+[data-testid="stChatMessage"] li{
+    line-height:1.55 !important;
+}
+
+/* Mobile: composer uses the full usable width and never sits off-screen. */
+@media (max-width:900px){
+    [data-testid="stBottomBlockContainer"]{
+        left:0 !important;
+        width:100% !important;
+        padding-left:10px !important;
+        padding-right:10px !important;
+    }
+    [data-testid="stMainBlockContainer"]{
+        padding-bottom:8rem !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ============================================================
+# REACH AI — FINAL DESKTOP CENTERING FIX
+# ============================================================
+st.markdown(r"""
+<style>
+@media (min-width: 901px) {
+    /* Main app area already begins after Streamlit's sidebar.
+       Centre content inside that remaining workspace — do not offset it again. */
+    [data-testid="stMainBlockContainer"]{
+        width:100% !important;
+        max-width:1120px !important;
+        margin-left:auto !important;
+        margin-right:auto !important;
+        padding-left:28px !important;
+        padding-right:28px !important;
+        box-sizing:border-box !important;
+    }
+
+    /* Streamlit's chat-input wrapper is viewport-fixed, so align its inner
+       composer to the same centred workspace as the conversation. */
+    [data-testid="stBottomBlockContainer"]{
+        left:180px !important;
+        right:0 !important;
+        width:auto !important;
+        background:#020b07 !important;
+        box-sizing:border-box !important;
+        padding-left:28px !important;
+        padding-right:28px !important;
+    }
+
+    [data-testid="stBottomBlockContainer"] > div{
+        width:100% !important;
+        max-width:1064px !important;
+        margin-left:auto !important;
+        margin-right:auto !important;
+        padding-left:0 !important;
+        padding-right:0 !important;
+        box-sizing:border-box !important;
+    }
+
+    [data-testid="stChatInput"]{
+        width:100% !important;
+        max-width:100% !important;
+        margin:0 auto !important;
+        box-sizing:border-box !important;
+    }
+}
+
+@media (max-width: 900px) {
+    [data-testid="stMainBlockContainer"]{
+        width:100% !important;
+        max-width:100% !important;
+        margin:0 auto !important;
+        padding-left:14px !important;
+        padding-right:14px !important;
+    }
+
+    [data-testid="stBottomBlockContainer"]{
+        left:0 !important;
+        right:0 !important;
+        width:100% !important;
+        padding-left:14px !important;
+        padding-right:14px !important;
+    }
+
+    [data-testid="stBottomBlockContainer"] > div,
+    [data-testid="stChatInput"]{
+        width:100% !important;
+        max-width:100% !important;
+        margin:0 auto !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ============================================================
+# REACH AI — IN-FLOW COMPOSER + UPLOAD STYLING
+# ============================================================
+st.markdown(r"""
+<style>
+/* No fixed chat-input container is used in REACH AI anymore. */
+[data-testid="stBottomBlockContainer"]{
+    display:none !important;
+}
+
+/* Remove the extra bottom space that was only needed for fixed st.chat_input. */
+[data-testid="stMainBlockContainer"]{
+    padding-bottom:2.5rem !important;
+}
+
+.reach-composer-label{
+    margin-top:18px;
+    margin-bottom:7px;
+    font-size:10px;
+    font-weight:800;
+    letter-spacing:.18em;
+    color:#71847a;
+}
+
+/* Upload control: compact REACH-style attachment area. */
+[data-testid="stFileUploader"]{
+    background:#06120c !important;
+    border:1px solid rgba(46,234,122,.16) !important;
+    border-radius:12px !important;
+    padding:4px 10px !important;
+    margin-bottom:8px !important;
+}
+[data-testid="stFileUploader"] section{
+    background:transparent !important;
+    border:none !important;
+    min-height:58px !important;
+}
+[data-testid="stFileUploader"] button{
+    background:#0a2116 !important;
+    color:#dff8e9 !important;
+    border:1px solid rgba(46,234,122,.24) !important;
+}
+
+/* Composer form matches the conversation width and stays in normal document flow. */
+div[data-testid="stForm"]{
+    background:#06120c !important;
+    border:1px solid rgba(46,234,122,.18) !important;
+    border-radius:14px !important;
+    padding:10px 12px 8px !important;
+    box-shadow:none !important;
+}
+div[data-testid="stForm"] textarea{
+    background:#07150e !important;
+    color:#edf7f0 !important;
+    border-color:rgba(255,255,255,.10) !important;
+    border-radius:10px !important;
+}
+div[data-testid="stForm"] textarea::placeholder{
+    color:#71847a !important;
+    opacity:1 !important;
+}
+
+@media (max-width:600px){
+    div[data-testid="stForm"]{
+        padding:8px !important;
+    }
+    [data-testid="stFileUploader"]{
+        padding:3px 7px !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ============================================================
+# REACH AI — READABILITY / CONTRAST FIX
+# ============================================================
+st.markdown(r"""
+<style>
+/* Sidebar saved-chat dropdown */
+section[data-testid="stSidebar"] div[data-baseweb="select"] > div{
+    background:#07150e !important;
+    border:1px solid #2b5b43 !important;
+}
+section[data-testid="stSidebar"] div[data-baseweb="select"] span,
+section[data-testid="stSidebar"] div[data-baseweb="select"] input{
+    color:#f2f7f4 !important;
+    -webkit-text-fill-color:#f2f7f4 !important;
+    opacity:1 !important;
+}
+section[data-testid="stSidebar"] div[data-baseweb="select"] svg{
+    fill:#d9e7df !important;
+}
+
+/* Labels / helper copy around the composer */
+.reach-composer-label{
+    color:#a9bbb1 !important;
+    opacity:1 !important;
+}
+[data-testid="stFileUploader"] small,
+[data-testid="stFileUploader"] p,
+[data-testid="stFileUploader"] span,
+[data-testid="stFileUploader"] label{
+    color:#aebfb5 !important;
+    opacity:1 !important;
+}
+[data-testid="stFileUploader"] button,
+[data-testid="stFileUploader"] button *{
+    color:#f1fff7 !important;
+    -webkit-text-fill-color:#f1fff7 !important;
+    opacity:1 !important;
+}
+
+/* Message field + placeholder */
+div[data-testid="stForm"] textarea{
+    color:#f4faf6 !important;
+    -webkit-text-fill-color:#f4faf6 !important;
+    opacity:1 !important;
+}
+div[data-testid="stForm"] textarea::placeholder{
+    color:#a7b8ae !important;
+    -webkit-text-fill-color:#a7b8ae !important;
+    opacity:1 !important;
+}
+
+/* Form helper text and captions */
+div[data-testid="stForm"] [data-testid="stCaptionContainer"],
+div[data-testid="stForm"] [data-testid="stCaptionContainer"] *,
+div[data-testid="stForm"] small,
+div[data-testid="stForm"] p{
+    color:#aebfb5 !important;
+    opacity:1 !important;
+}
+
+/* Buttons should never inherit dark/invisible text */
+div[data-testid="stForm"] button,
+div[data-testid="stForm"] button *,
+section[data-testid="stSidebar"] button,
+section[data-testid="stSidebar"] button *{
+    opacity:1 !important;
+}
+
+/* Chat messages */
+[data-testid="stChatMessage"]{
+    color:#edf6f0 !important;
+}
+[data-testid="stChatMessage"] p,
+[data-testid="stChatMessage"] li,
+[data-testid="stChatMessage"] strong{
+    color:#edf6f0 !important;
+    opacity:1 !important;
+}
+
+/* Generic muted copy on the REACH AI page remains readable on black. */
+[data-testid="stCaptionContainer"],
+[data-testid="stCaptionContainer"] *{
+    color:#9fb2a7 !important;
+    opacity:1 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ============================================================
+# HOME — PROFESSIONAL QUICK ACTIONS + CLICKABLE HEADER ACTIONS
+# ============================================================
+st.markdown(r"""
+<style>
+.reach-qa-title{
+    font-size:18px;
+    line-height:1.2;
+    font-weight:800;
+    color:#f1f7f3;
+    margin:2px 0 9px 0;
+}
+[data-testid="stMainBlockContainer"] div[data-testid="stHorizontalBlock"]:has(button[kind="secondary"]) button{
+    min-height:38px;
+}
+button[kind="secondary"]{
+    border-color:rgba(46,234,122,.18) !important;
+}
+button[kind="secondary"]:hover{
+    border-color:#2EEA7A !important;
+    color:#effff5 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ============================================================
+# HOME — CLICKABLE DASHBOARD CONTROLS
+# ============================================================
+st.markdown(r"""
+<style>
+/* Compact dashboard navigation buttons */
+div[data-testid="stHorizontalBlock"] button{
+    transition:border-color .15s ease, background .15s ease, transform .15s ease;
+}
+div[data-testid="stHorizontalBlock"] button:hover{
+    border-color:#2EEA7A !important;
+    background:#082016 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ============================================================
+# HOME ACTIVITY/TASK TABS — CLEAR CLICKABLE STATES
+# ============================================================
+st.markdown(r"""
+<style>
+/* The dashboard tab rows are native Streamlit buttons; make them visibly interactive. */
+div[data-testid="stHorizontalBlock"] button {
+    cursor:pointer !important;
+}
+div[data-testid="stHorizontalBlock"] button p {
+    opacity:1 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ============================================================
+# LANDING — REAL CLICKABLE NAVIGATION
+# ============================================================
+st.markdown(r"""
+<style>
+/* Hide the old decorative landing centre-nav links so there is only one nav. */
+.landing-nav-center,
+.nav-center,
+.hero-nav-center,
+.landing-links{
+    display:none !important;
+}
+
+/* Real landing navigation buttons */
+[data-testid="stMainBlockContainer"] button[kind="secondary"]{
+    cursor:pointer !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ============================================================
+# LANDING — LARGE READABLE + CLICKABLE LOWER SECTIONS
+# ============================================================
+st.markdown(r"""
+<style>
+/* Improve readability of the lower landing page. */
+.landing-click-title{
+    color:#f2f8f4 !important;
+    font-size:22px !important;
+    line-height:1.25 !important;
+    font-weight:800 !important;
+    margin:30px 0 12px !important;
+}
+.landing-click-sub{
+    color:#a8bbb0 !important;
+    font-size:15px !important;
+    margin:-5px 0 14px !important;
+}
+.industry-title{ margin-top:34px !important; }
+.benefit-title{ margin-top:36px !important; }
+
+.benefit-copy{
+    min-height:82px;
+    padding:15px 4px 8px;
+}
+.benefit-copy b{
+    display:block;
+    color:#eef7f1 !important;
+    font-size:16px !important;
+    line-height:1.35 !important;
+    margin-bottom:7px;
+}
+.benefit-copy span{
+    display:block;
+    color:#a7b9af !important;
+    font-size:14px !important;
+    line-height:1.45 !important;
+}
+
+/* Larger landing controls — readable at normal desktop zoom. */
+[data-testid="stMainBlockContainer"] button p{
+    font-size:14px !important;
+    line-height:1.25 !important;
+    opacity:1 !important;
+}
+[data-testid="stMainBlockContainer"] button{
+    min-height:44px !important;
+}
+[data-testid="stMainBlockContainer"] button:hover{
+    border-color:#2EEA7A !important;
+    background:#082016 !important;
+}
+
+/* Make the industry buttons feel like cards. */
+.industry-title + .landing-click-sub + div [data-testid="stButton"] button{
+    min-height:72px !important;
+}
+
+/* Improve legacy lower-section text too. */
+.used-industries-title,
+.used-across-industries,
+.how-title,
+.benefit-title-old{
+    font-size:20px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ============================================================
+# LANDING — CLEAN SINGLE NAV + READABLE CLICKABLE CARDS
+# ============================================================
+st.markdown(r"""
+<style>
+/* Only the original designed landing navigation should remain visible. */
+.reach-nav-link,
+.reach-card-link,
+.reach-benefit-link{
+    color:inherit !important;
+    text-decoration:none !important;
+    cursor:pointer !important;
+}
+.reach-nav-link:hover,
+.reach-card-link:hover,
+.reach-benefit-link:hover{
+    color:#2EEA7A !important;
+}
+
+/* Make original landing copy readable without changing the dark premium design. */
+.landing-page, .landing-page *{
+    text-rendering:optimizeLegibility;
+}
+.landing-page p,
+.landing-page span,
+.landing-page div{
+    opacity:1;
+}
+
+/* Lower landing cards/labels: force usable minimum type sizes. */
+.reach-card-link{
+    display:inline-block;
+    font-size:14px !important;
+    line-height:1.3 !important;
+    font-weight:700 !important;
+    padding:4px 2px !important;
+}
+.reach-benefit-link{
+    display:inline-block;
+    font-size:16px !important;
+    line-height:1.35 !important;
+    font-weight:800 !important;
+    margin-bottom:6px !important;
+}
+.reach-nav-link{
+    font-size:14px !important;
+    font-weight:700 !important;
+    padding:8px 6px !important;
+}
+
+/* Improve all legacy tiny text in the landing HTML. */
+[data-testid="stMainBlockContainer"] .landing-page small{
+    font-size:13px !important;
+}
+[data-testid="stMainBlockContainer"] .landing-page p{
+    font-size:max(13px, .9rem) !important;
+    line-height:1.5 !important;
+}
+
+/* Hover makes the user aware the card/label is interactive. */
+.reach-card-link:hover,
+.reach-benefit-link:hover{
+    transform:translateY(-1px);
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ============================================================
+# PUBLIC WEBSITE INFO PAGE STYLES
+# ============================================================
+st.markdown(r"""
+<style>
+.public-kicker{
+    color:#2EEA7A;
+    font-size:12px;
+    font-weight:900;
+    letter-spacing:.25em;
+    margin-top:28px;
+    margin-bottom:14px;
+}
+.public-title{
+    color:#f5faf7;
+    font-size:clamp(34px,4.6vw,64px);
+    line-height:1.03;
+    font-weight:900;
+    letter-spacing:-.045em;
+    max-width:950px;
+    margin-bottom:18px;
+}
+.public-lead{
+    color:#a9bbb1;
+    font-size:18px;
+    line-height:1.65;
+    max-width:900px;
+    margin-bottom:34px;
+}
+.step-num{
+    color:#2EEA7A;
+    font-size:12px;
+    font-weight:900;
+    letter-spacing:.15em;
+}
+@media(max-width:600px){
+    .public-title{font-size:34px;}
+    .public-lead{font-size:16px;}
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ============================================================
+# RESEARCH INTELLIGENCE
+# ============================================================
+st.markdown(r"""
+<style>
+/* Keep research intelligence readable and premium. */
+[data-testid="stMetric"]{
+    background:rgba(5,25,17,.72);
+    border:1px solid rgba(46,234,122,.16);
+    border-radius:12px;
+    padding:12px 14px;
+}
+[data-testid="stMetricLabel"] p{
+    font-size:13px !important;
+    color:#a8bbb0 !important;
+}
+[data-testid="stMetricValue"]{
+    font-size:24px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ============================================================
+# REACH FIRST-TIME GUIDANCE
+# ============================================================
+def _guide_nav(destination):
+    st.session_state.page = destination
+    st.rerun()
+
+def reach_workflow_guide(current="Discover", key_prefix="workflow"):
+    destinations = {
+        "Discover": "Companies" if current == "Discover" else "Enter Product",
+        "Research": "Research",
+        "People": "People",
+        "Outreach": "Outreach",
+        "Pipeline": "Opportunities",
+    }
+    steps = ["Discover", "Research", "People", "Outreach", "Pipeline"]
+    cols = st.columns(5, gap="small")
+    for i, (col, step) in enumerate(zip(cols, steps)):
+        with col:
+            label = ("✓ " if steps.index(step) < steps.index(current) else "") + step
+            if st.button(label, key=f"{key_prefix}_{step}", use_container_width=True,
+                         type="primary" if step == current else "secondary"):
+                _guide_nav(destinations[step])
+
+def guided_tour_panel():
+    step = int(st.session_state.get("reach_tour_step", 1))
+    steps = [
+        {
+            "title": "Tell REACH what you sell",
+            "body": "Start by entering your product, service or business. REACH uses this to understand the market it should look for.",
+            "action": "Enter product information →",
+            "page": "Enter Product",
+            "anchor": "reach-product-entry",
+            "hint": "Example: Premium umbrellas for UK retailers",
+        },
+        {
+            "title": "Build your market",
+            "body": "Review the suggested customer segments and search terms, then build the market to discover relevant organisations.",
+            "action": "Build my market →",
+            "page": "Market Ready",
+            "anchor": "reach-market-strategy",
+            "hint": "Check the suggested segments before continuing.",
+        },
+        {
+            "title": "Review the companies",
+            "body": "Look through the organisations REACH found. You can work with all of them or select only the companies you want.",
+            "action": "Review companies →",
+            "page": "Companies",
+            "anchor": "reach-companies-work",
+            "hint": "You do not need to tick every company to research them all.",
+        },
+        {
+            "title": "Research the organisations",
+            "body": "Use Research with AI for the whole market, or select companies first to research only those organisations.",
+            "action": "Research organisations →",
+            "page": "Research",
+            "anchor": "reach-research-work",
+            "hint": "No selection = research all. Selection = research only those companies.",
+        },
+        {
+            "title": "Find the right people",
+            "body": "Move from companies to the decision-makers and roles most relevant to your offer.",
+            "action": "Find decision-makers →",
+            "page": "People",
+            "anchor": "reach-people-work",
+            "hint": "REACH helps you understand who is worth contacting.",
+        },
+        {
+            "title": "Prepare outreach",
+            "body": "Create personalised outreach, review it and organise follow-ups before anything is sent.",
+            "action": "Prepare outreach →",
+            "page": "Outreach",
+            "anchor": "reach-outreach-work",
+            "hint": "The portfolio demo previews outreach; it does not send real messages.",
+        },
+        {
+            "title": "Track what happens",
+            "body": "Keep replies, meetings and opportunities organised so you can see which parts of your market are turning green.",
+            "action": "Open pipeline →",
+            "page": "Opportunities",
+            "anchor": "reach-pipeline-work",
+            "hint": "Interested organisations can progress into meetings and opportunities.",
+        },
+    ]
+    item = steps[max(0, min(step - 1, len(steps) - 1))]
+    with st.container(border=True):
+        top1, top2 = st.columns([5, 1])
+        with top1:
+            st.markdown('<div class="guide-badge">INTERACTIVE GUIDE</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="guide-title">Step {step} of {len(steps)} · {item["title"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="guide-intro">{item["body"]}</div>', unsafe_allow_html=True)
+        with top2:
+            if st.button("Skip guide", key=f"tour_skip_{step}", use_container_width=True):
+                st.session_state.reach_tour_active = False
+                st.session_state.show_reach_guide = False
+                st.rerun()
+
+        st.progress(step / len(steps))
+        st.info("GUIDE TIP · " + item["hint"])
+
+        b1, b2, b3 = st.columns([1, 2, 1])
+        with b1:
+            if step > 1 and st.button("← Previous", key=f"tour_prev_{step}", use_container_width=True):
+                previous_item = steps[step - 2]
+                st.session_state.reach_tour_step = step - 1
+                st.session_state.page = previous_item["page"]
+                st.session_state["_reach_scroll_target"] = previous_item.get("anchor")
+                st.rerun()
+        with b2:
+            if st.button(item["action"], key=f"tour_action_{step}", use_container_width=True, type="primary"):
+                st.session_state.reach_tour_active = True
+                if step == 2 and DEMO_MODE:
+                    complete_demo_market_build()
+                else:
+                    st.session_state.page = item["page"]
+                    st.session_state["_reach_scroll_target"] = item.get("anchor")
+                    st.rerun()
+        with b3:
+            if step < len(steps):
+                if st.button("Next →", key=f"tour_next_{step}", use_container_width=True):
+                    next_item = steps[step]  # current step is 1-based; this indexes the next item
+                    st.session_state.reach_tour_step = step + 1
+                    st.session_state.page = next_item["page"]
+                    st.session_state["_reach_scroll_target"] = next_item.get("anchor")
+                    st.rerun()
+            else:
+                if st.button("Finish ✓", key="tour_finish", use_container_width=True):
+                    st.session_state.reach_tour_active = False
+                    st.session_state.show_reach_guide = False
+                    st.session_state.page = "Home"
+                    st.rerun()
+
+def first_time_guide(title, intro, steps, key, current="Discover"):
+    # Clear visual boundary so this cannot be mistaken for normal page content.
+    st.markdown('<div class="guide-shell-label">REACH GUIDE · OPTIONAL</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        g1, g2, g3 = st.columns([4, 1, 1])
+        with g1:
+            st.markdown(f'<div class="guide-badge">GUIDE</div><div class="guide-title">{title}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="guide-intro">{intro}</div>', unsafe_allow_html=True)
+        with g2:
+            if st.button("Step-by-step", key=f"{key}_tour", use_container_width=True, type="primary"):
+                st.session_state.reach_tour_active = True
+                st.session_state.reach_tour_step = 1
+                st.rerun()
+        with g3:
+            if st.button("Skip guide", key=f"{key}_skip", use_container_width=True):
+                st.session_state[key] = False
+                st.rerun()
+
+        reach_workflow_guide(current, key_prefix=f"{key}_workflow")
+        cols = st.columns(len(steps), gap="small")
+        destinations = ["Companies", "Research", "People", "Outreach", "Opportunities"]
+        for i, (col, (num, heading, body)) in enumerate(zip(cols, steps)):
+            with col:
+                st.markdown(
+                    f"""
+                    <div class="guide-card">
+                        <div class="guide-card-heading">
+                            <span class="guide-card-number">{num}</span>
+                            <span class="guide-card-title">{heading}</span>
+                        </div>
+                        <div class="guide-card-body">{body}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                dest = destinations[min(i, len(destinations)-1)]
+                if st.button("Go →", key=f"{key}_card_{i}", use_container_width=True):
+                    _guide_nav(dest)
+
+
+
+st.markdown(r"""
+<style>
+.guide-shell-label{
+    margin-top:12px;
+    margin-bottom:-1px;
+    padding:10px 14px;
+    border:2px solid rgba(46,234,122,.55);
+    border-bottom:0;
+    border-radius:14px 14px 0 0;
+    background:rgba(46,234,122,.07);
+    color:#43f49a;
+    font-size:11px;
+    font-weight:900;
+    letter-spacing:.16em;
+}
+.guide-shell-label + div [data-testid="stVerticalBlockBorderWrapper"]{
+    border:2px solid rgba(46,234,122,.42) !important;
+    box-shadow:0 0 0 1px rgba(46,234,122,.04), 0 12px 35px rgba(0,0,0,.18);
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ============================================================
+# LANDING FORM READABILITY + ONBOARDING VISIBILITY
+# ============================================================
+st.markdown(r"""
+<style>
+/* Inputs */
+[data-testid="stTextInput"] input,
+[data-testid="stTextArea"] textarea{
+    color:#F4FBF7 !important;
+    -webkit-text-fill-color:#F4FBF7 !important;
+    background:#07150F !important;
+    border-color:rgba(123,255,188,.45) !important;
+    font-size:15px !important;
+}
+[data-testid="stTextInput"] input::placeholder,
+[data-testid="stTextArea"] textarea::placeholder{
+    color:#A9BBB1 !important;
+    -webkit-text-fill-color:#A9BBB1 !important;
+    opacity:1 !important;
+}
+
+/* Select field itself */
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div{
+    background:#07150F !important;
+    border-color:rgba(123,255,188,.35) !important;
+    color:#F4FBF7 !important;
+}
+[data-testid="stSelectbox"] div[data-baseweb="select"] *{
+    color:#F4FBF7 !important;
+    -webkit-text-fill-color:#F4FBF7 !important;
+    opacity:1 !important;
+}
+
+/* The dropdown portal is rendered outside the normal page tree. */
+div[data-baseweb="popover"],
+div[data-baseweb="menu"],
+ul[role="listbox"]{
+    background:#07150F !important;
+    color:#F4FBF7 !important;
+}
+li[role="option"],
+div[role="option"]{
+    background:#07150F !important;
+    color:#F4FBF7 !important;
+    -webkit-text-fill-color:#F4FBF7 !important;
+    font-size:15px !important;
+    opacity:1 !important;
+}
+li[role="option"]:hover,
+div[role="option"]:hover,
+li[aria-selected="true"],
+div[aria-selected="true"]{
+    background:#0D2A1C !important;
+    color:#55F2A0 !important;
+    -webkit-text-fill-color:#55F2A0 !important;
+}
+
+/* Form labels/help copy */
+[data-testid="stWidgetLabel"] p,
+[data-testid="stCaptionContainer"] p{
+    color:#C5D4CC !important;
+    opacity:1 !important;
+}
+
+/* Make the interactive guide unmistakably separate from normal content. */
+.guide-badge{
+    font-size:12px !important;
+}
+.guide-title{
+    font-size:24px !important;
+}
+.guide-intro{
+    font-size:15px !important;
+    color:#C2D2C9 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+def render_reach_scroll_anchor(anchor_id):
+    """Render an anchor and, when requested by the guide, scroll/focus this work area."""
+    st.markdown(f'<div id="{anchor_id}" style="scroll-margin-top:18px;"></div>', unsafe_allow_html=True)
+    if st.session_state.get("_reach_scroll_target") == anchor_id:
+        st.session_state["_reach_scroll_target"] = None
+        import streamlit.components.v1 as components
+        components.html(
+            f"""
+            <script>
+            setTimeout(function () {{
+                const doc = window.parent.document;
+                const target = doc.getElementById('{anchor_id}');
+                if (target) target.scrollIntoView({{behavior:'smooth', block:'start'}});
+            }}, 300);
+            </script>
+            """,
+            height=0,
+        )
+
+
+# ============================================================
+# PROFESSIONAL GUIDE CARD LAYOUT
+# ============================================================
+st.markdown(r"""
+<style>
+.guide-card{
+    min-height:150px !important;
+    height:150px;
+    border:1px solid rgba(46,234,122,.18) !important;
+    background:linear-gradient(180deg, rgba(7,25,17,.92), rgba(4,17,11,.96)) !important;
+    border-radius:12px !important;
+    padding:16px !important;
+    display:flex !important;
+    flex-direction:column !important;
+    box-sizing:border-box !important;
+}
+.guide-card-heading{
+    display:flex !important;
+    align-items:flex-start !important;
+    gap:8px !important;
+    margin-bottom:12px !important;
+    line-height:1.25 !important;
+}
+.guide-card-number{
+    flex:0 0 auto;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:24px;
+    height:24px;
+    padding:0 7px;
+    border-radius:7px;
+    background:rgba(46,234,122,.11);
+    border:1px solid rgba(46,234,122,.20);
+    color:#43F49A !important;
+    font-size:11px !important;
+    font-weight:900 !important;
+}
+.guide-card-title{
+    display:block !important;
+    color:#F4FAF6 !important;
+    font-size:14px !important;
+    font-weight:800 !important;
+    line-height:1.35 !important;
+    padding-top:2px;
+}
+.guide-card-body{
+    display:block !important;
+    color:#A9BBB1 !important;
+    font-size:13px !important;
+    line-height:1.55 !important;
+    margin-top:0 !important;
+}
+.guide-card + div{
+    margin-top:9px;
+}
+
+/* Give the guide itself more breathing room. */
+.guide-title{
+    margin-top:7px !important;
+    margin-bottom:8px !important;
+}
+.guide-intro{
+    margin-bottom:17px !important;
+    line-height:1.6 !important;
+}
+.guide-progress{
+    margin-top:18px !important;
+    margin-bottom:18px !important;
+}
+
+/* Keep the five cards visually separated on narrower screens. */
+@media(max-width:900px){
+    .guide-card{
+        min-height:135px !important;
+        height:auto !important;
+        margin-bottom:8px !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+def build_demo_market(query):
+    """Create fictional, query-aware organisations locally. No external API calls."""
+    q = (query or "target market").strip()
+    clean = re.sub(r"[^A-Za-z0-9 ]+", " ", q)
+    words = [w.capitalize() for w in clean.split() if w][:3]
+    label = " ".join(words) or "Target Market"
+
+    ql = q.lower()
+    if "umbrella" in ql:
+        rows = [
+            ("Rain & Roam Retail Ltd", "London", "Outdoor & travel retail"),
+            ("Canopy Goods Co", "Manchester", "Accessories retailer"),
+            ("Northshore Outdoor Stores", "Birmingham", "Outdoor retailer"),
+            ("City Department Retail Group", "Leeds", "Department store"),
+            ("Voyager Travel Essentials", "Bristol", "Travel accessories"),
+            ("Weatherwise Wholesale Ltd", "Glasgow", "Consumer goods wholesaler"),
+        ]
+    elif "perfume" in ql or "fragrance" in ql:
+        rows = [
+            ("Aurora Fragrance Studio", "London", "Fragrance retailer"),
+            ("Scent & Co Retail", "Manchester", "Beauty retailer"),
+            ("Maison Verde Beauty", "Birmingham", "Beauty & fragrance"),
+            ("North & Bloom Cosmetics", "Leeds", "Cosmetics retailer"),
+            ("Velvet Note Perfumery", "Bristol", "Perfumery"),
+            ("Lumen Luxury Goods", "Edinburgh", "Luxury retail"),
+        ]
+    elif "veter" in ql or "animal" in ql:
+        rows = [
+            ("Greenfield Veterinary Practice Ltd", "London", "Veterinary practice"),
+            ("Riverside Animal Care Ltd", "Manchester", "Animal care"),
+            ("Oakwood Veterinary Group Ltd", "Birmingham", "Veterinary group"),
+            ("Northgate Animal Hospital Ltd", "Leeds", "Animal hospital"),
+            ("Harbour Vets Ltd", "Bristol", "Veterinary practice"),
+            ("Meadow Veterinary Centre Ltd", "Edinburgh", "Veterinary centre"),
+        ]
+    else:
+        rows = [
+            (f"{label} Retail Partners", "London", "Retail"),
+            (f"North {label} Group", "Manchester", "Business services"),
+            (f"{label} Distribution Co", "Birmingham", "Distribution"),
+            (f"City {label} Solutions", "Leeds", "Commercial services"),
+            (f"{label} Trade Partners", "Bristol", "Wholesale"),
+            (f"Harbour {label} Ltd", "Edinburgh", "Independent business"),
+        ]
+
+    results = []
+    for i, (name, city, category) in enumerate(rows, 1):
+        results.append({
+            "company_name": name,
+            "name": name,
+            "company_number": f"DEMO{i:04d}",
+            "address": f"{city}, United Kingdom",
+            "registered_office_address": f"{city}, United Kingdom",
+            "company_status": "active",
+            "status": "active",
+            "relevance_score": max(80, 97 - ((i - 1) * 3)),
+            "source": "Portfolio demo",
+            "category": category,
+            "website": f"https://example.com/demo-{i}",
+            "demo_query": q,
+        })
+    return results
+
+
+def complete_demo_market_build():
+    """Complete Step 2 in portfolio demo and move to Companies."""
+    query = (
+        st.session_state.get("product_description")
+        or st.session_state.get("product_input")
+        or st.session_state.get("_demo_market_query")
+        or "target market"
+    )
+    st.session_state.market_results = build_demo_market(query)
+    st.session_state.market_built = True
+    st.session_state.company_status_filter = "All companies"
+    st.session_state["_demo_market_query"] = query
+    if st.session_state.get("reach_tour_active", False):
+        st.session_state.reach_tour_step = 3
+        st.session_state["_reach_scroll_target"] = "reach-companies-work"
+    st.session_state.page = "Companies"
+    st.rerun()
+
+
+
+# Canonical REACH workflow destinations used by onboarding/help navigation.
+REACH_GUIDE_DESTINATIONS = {
+    "product": "Enter Product",
+    "market": "Market Ready",
+    "companies": "Companies",
+    "research": "Research",
+    "people": "People",
+    "outreach": "Outreach",
+    "pipeline": "Opportunities",
+}
+
+
+def demo_research_intent(instruction, focus):
+    """Interpret arbitrary demo research instructions locally; never calls an API."""
+    q=(instruction or "").strip()
+    s=(q+" "+(focus or "")).lower()
+    intents=[]
+    rules=[
+        ("pricing",["price","pricing","cost","how much","£","expensive","cheap","rose","product price"]),
+        ("products",["product","products","service","services","sell","offer","range","catalog"]),
+        ("people",["owner","founder","director","ceo","decision","manager","who owns","who runs","people"]),
+        ("contact",["email","phone","contact","linkedin","reach them","contact details"]),
+        ("reviews",["review","reviews","rating","reputation","feedback","trustpilot"]),
+        ("competitors",["competitor","competitors","alternative","rival"]),
+        ("locations",["location","locations","branch","branches","where are"]),
+        ("technology",["technology","tech stack","software","platform","website technology"]),
+        ("activity",["recent","news","activity","latest","announcement"]),
+        ("fit",["fit","suitable","relevant","match","customer type","market"]),
+    ]
+    if any(x in s for x in ["everything","full research","all information","research all","full company"]):
+        return ["fit","products","pricing","people","contact","reviews","competitors","locations","activity"]
+    for intent,keys in rules:
+        if any(k in s for k in keys):
+            intents.append(intent)
+    return intents or ["custom"]
+
+def demo_instruction_result(company, instruction, focus, idx=0):
+    """Produce query-responsive fictional demo research, organised per company."""
+    name=company.get("company_name") or company.get("name") or "Organisation"
+    category=company.get("category","Relevant organisation")
+    intents=demo_research_intent(instruction,focus)
+    q=(instruction or "").strip()
+    seed=sum(ord(c) for c in (name+q))
+    fit=max(72,min(97,88+(seed%10)-idx))
+    result={"fit":fit,"category":category,"intents":intents,"instruction":q or focus,
+            "sections":[],"roles":["Commercial lead","Operations lead","Owner / Director"],
+            "routes":["Company website","Public business contact route"]}
+
+    # All content below is explicitly fictional/sample for the public portfolio demo.
+    if "pricing" in intents:
+        subject="roses" if "rose" in q.lower() else ("products/services" if not q else q)
+        low=8+(seed%9); mid=low+12+(seed%11); high=mid+20+(seed%18)
+        result["pricing"]={
+            "subject": subject,
+            "prices": [low, mid, high],
+            "lowest": low,
+            "highest": high,
+        }
+        result["sections"].append(("Pricing / requested item",
+            f"Demo response for “{subject}”: illustrative examples are £{low}, £{mid} and £{high}. "
+            "These are fictional portfolio-demo values, not live prices from this organisation."))
+    if "products" in intents:
+        result["sections"].append(("Products & services",
+            f"Demo catalogue for {name}: Core range, Premium range, Business/Trade option and Seasonal/Specialist option. "
+            "A live private research run would replace these with sourced products from permitted public pages."))
+    if "people" in intents:
+        result["sections"].append(("Decision-makers",
+            "Likely roles to investigate: Owner / Director, Commercial Lead and Operations Lead. "
+            "No real person is identified in the public demo."))
+    if "contact" in intents:
+        result["sections"].append(("Contact routes",
+            "Demo-safe routes: official company website and public business contact page. "
+            "Real emails, phone numbers and Hunter enrichment are disabled in the public demo."))
+    if "reviews" in intents:
+        result["sections"].append(("Reviews & reputation",
+            "Sample reputation research would summarise rating themes, recurring praise/complaints and review volume with source links. "
+            "No live review site was queried in this demo."))
+    if "competitors" in intents:
+        result["sections"].append(("Competitors",
+            f"Demo competitor analysis for the {category} market would compare positioning, offer, pricing and target customer. "
+            "Named live competitors are intentionally not invented."))
+    if "locations" in intents:
+        result["sections"].append(("Locations",
+            f"Discovery record location: {company.get('address') or company.get('registered_office_address') or 'United Kingdom'}. "
+            "Live branch/location verification is disabled in the public demo."))
+    if "technology" in intents:
+        result["sections"].append(("Technology",
+            "A live research run could inspect permitted public technology signals. The portfolio demo does not claim a real tech stack."))
+    if "activity" in intents:
+        result["sections"].append(("Recent activity",
+            "A live research run would return dated public activity with source links. The portfolio demo does not fabricate current news."))
+    if "fit" in intents:
+        result["sections"].append(("Organisation fit",
+            f"Illustrative REACH fit score: {fit}%. The score demonstrates workflow only and is not a verified assessment."))
+    if "custom" in intents:
+        result["sections"].append(("Your research question",
+            f"REACH understood the request: “{q or focus}”. In this public demo, arbitrary questions are demonstrated with a structured sample response. "
+            "The private version can route the same instruction to permitted live research providers and return sourced findings."))
+    return result
+
+
+
+def demo_compare_research_results(results, question):
+    """Compare already-generated demo research across organisations."""
+    q=(question or "").strip()
+    ql=q.lower()
+    comparison={
+        "question": q,
+        "rows": [],
+        "summary": "",
+        "matched": [],
+        "metric": None,
+        "threshold": None,
+    }
+
+    # Understand common price-threshold questions such as:
+    # "find the roses cheaper than 70 pounds", "under £70", "less than 70".
+    threshold_match=re.search(
+        r"(?:under|below|less than|cheaper than|lower than|max(?:imum)?(?: price)?(?: of)?|<=?)\\s*£?\\s*(\\d+(?:\\.\\d+)?)",
+        ql
+    )
+    if not threshold_match:
+        threshold_match=re.search(r"£\\s*(\\d+(?:\\.\\d+)?)", ql)
+
+    threshold=float(threshold_match.group(1)) if threshold_match else None
+    wants_price=any(x in ql for x in ["price","cost","cheap","cheaper","£","pound","under","below","less than"])
+    wants_fit=any(x in ql for x in ["fit","best match","match score","highest fit"])
+    wants_rank=any(x in ql for x in ["compare","rank","best","cheapest","lowest","highest","out of all","which"])
+
+    if wants_price:
+        comparison["metric"]="price"
+        comparison["threshold"]=threshold
+        for name,r in results.items():
+            p=r.get("pricing") or {}
+            prices=p.get("prices") or []
+            if prices:
+                low=min(prices)
+                high=max(prices)
+                qualifies=(low < threshold) if threshold is not None else True
+                comparison["rows"].append({
+                    "company":name,
+                    "subject":p.get("subject","requested item"),
+                    "lowest":low,
+                    "highest":high,
+                    "qualifies":qualifies,
+                })
+        comparison["rows"].sort(key=lambda x:x["lowest"])
+        comparison["matched"]=[x["company"] for x in comparison["rows"] if x["qualifies"]]
+        if threshold is not None:
+            comparison["summary"]=(
+                f"{len(comparison['matched'])} of {len(comparison['rows'])} researched organisations "
+                f"have an illustrative lowest price below £{threshold:g}."
+            )
+        elif comparison["rows"]:
+            best=comparison["rows"][0]
+            comparison["summary"]=(
+                f"{best['company']} has the lowest illustrative demo price at £{best['lowest']}."
+            )
+    elif wants_fit or wants_rank:
+        comparison["metric"]="fit"
+        rows=[
+            {"company":name,"fit":r.get("fit",0),"category":r.get("category","")}
+            for name,r in results.items()
+        ]
+        rows.sort(key=lambda x:x["fit"], reverse=True)
+        comparison["rows"]=rows
+        if rows:
+            comparison["summary"]=(
+                f"{rows[0]['company']} has the highest illustrative REACH fit score "
+                f"among the researched organisations at {rows[0]['fit']}%."
+            )
+    else:
+        comparison["metric"]="overview"
+        rows=[]
+        for name,r in results.items():
+            p=r.get("pricing") or {}
+            rows.append({
+                "company":name,
+                "fit":r.get("fit",0),
+                "lowest":p.get("lowest"),
+                "topics":len(r.get("sections",[])),
+            })
+        comparison["rows"]=rows
+        comparison["summary"]=(
+            f"Compared {len(rows)} researched organisations across the demo findings currently available."
+        )
+    return comparison
+
+
+st.markdown(r"""
+<style>
+.research-org-index{
+    min-height:82px;
+    padding:13px 14px;
+    margin-bottom:10px;
+    border:1px solid rgba(46,234,122,.18);
+    border-radius:10px;
+    background:rgba(5,22,14,.82);
+}
+.research-org-name{color:#F3FAF6;font-weight:800;font-size:13px;line-height:1.35;margin-bottom:7px}
+.research-org-meta{color:#8FA398;font-size:11px;line-height:1.4}
+.research-compare-row{
+    display:grid;
+    grid-template-columns:2fr .8fr .8fr 1fr;
+    gap:14px;
+    align-items:center;
+    padding:13px 14px;
+    margin:8px 0;
+    border:1px solid rgba(46,234,122,.14);
+    border-radius:10px;
+    background:rgba(5,22,14,.76);
+}
+.research-compare-row b{display:block;color:#F3FAF6;font-size:12px;margin-bottom:3px}
+.research-compare-row span{display:block;color:#879B90;font-size:10px}
+.research-compare-badge{
+    border:1px solid rgba(46,234,122,.24);
+    border-radius:8px;
+    padding:8px 10px;
+    color:#50F29A;
+    font-size:10px;
+    font-weight:800;
+    text-align:center;
+}
+@media(max-width:850px){.research-compare-row{grid-template-columns:1fr 1fr}}
+
+</style>
+""", unsafe_allow_html=True)
+
 # ============================================================
 # HELPERS
 # ============================================================
@@ -2532,6 +3859,45 @@ def sidebar():
         btn("Home", "Home", "⌂", "home")
         btn("REACH AI", "AI", "✦", "reach_ai")
 
+        # REACH AI chat controls — session-only in the public portfolio demo.
+        # Chats persist while this Streamlit session is alive and never touch Supabase.
+        if page == "AI":
+            if st.button("＋  New chat", key="reach_ai_new_chat_side", use_container_width=True):
+                st.session_state.reach_ai_chat_counter = int(st.session_state.get("reach_ai_chat_counter", 0)) + 1
+                new_id = f"chat_{st.session_state.reach_ai_chat_counter}"
+                st.session_state.reach_ai_chats[new_id] = {
+                    "title": "New chat",
+                    "messages": [],
+                }
+                st.session_state.reach_ai_active_chat = new_id
+                st.session_state.reach_ai_messages = []
+                st.rerun()
+
+            chats = st.session_state.get("reach_ai_chats") or {}
+            if chats:
+                st.markdown('<div class="side-label" style="margin-top:8px">CHATS</div>', unsafe_allow_html=True)
+                chat_ids = list(chats.keys())[::-1]
+                current_id = st.session_state.get("reach_ai_active_chat")
+                if current_id not in chats:
+                    current_id = chat_ids[0]
+                    st.session_state.reach_ai_active_chat = current_id
+
+                current_index = chat_ids.index(current_id) if current_id in chat_ids else 0
+                chosen_id = st.selectbox(
+                    "Saved chats",
+                    options=chat_ids,
+                    index=current_index,
+                    format_func=lambda cid: chats.get(cid, {}).get("title", "New chat"),
+                    key="reach_ai_saved_chat_picker",
+                    label_visibility="collapsed",
+                )
+                if chosen_id != st.session_state.get("reach_ai_active_chat"):
+                    st.session_state.reach_ai_active_chat = chosen_id
+                    st.session_state.reach_ai_messages = list(
+                        chats.get(chosen_id, {}).get("messages", [])
+                    )
+                    st.rerun()
+
         st.markdown('<div class="side-label">PROSPECT & ENRICH</div>', unsafe_allow_html=True)
         btn("Search", "Companies", "⌕", "search")
         btn("Companies", "Companies", "▦", "companies")
@@ -2740,14 +4106,127 @@ if DEMO_MODE:
 if st.session_state.get("auth_user") and st.session_state.page in ("Landing", "Auth"):
     st.session_state.page = "Home"
 
+# Start the onboarding guide once per browser session for first-time demo visitors.
+if "reach_onboarding_seen" not in st.session_state:
+    st.session_state.reach_onboarding_seen = True
+    st.session_state.reach_tour_active = True
+    st.session_state.reach_tour_step = 1
+
+# Persistent optional step-by-step onboarding.
+# Render it before the page-routing if/elif chain so it cannot break that chain.
+if st.session_state.get("reach_tour_active", False) and st.session_state.get("page") != "Auth":
+    guided_tour_panel()
+
 if st.session_state.page == "Auth":
     render_auth_page()
 
+elif st.session_state.page == "Enter Product":
+    # Step 1 guide target.
+    render_reach_scroll_anchor("reach-product-entry")
+    st.markdown('<div class="public-kicker">STEP 1 · YOUR OFFER</div><div class="public-title">What do you want REACH to find customers for?</div>', unsafe_allow_html=True)
+    st.markdown('<div class="public-lead">Describe your product, service or business. This gives REACH the context it needs to build the right market.</div>', unsafe_allow_html=True)
+
+    with st.container(border=True):
+        guide_product = st.text_area(
+            "Product, service or business",
+            key="guide_product_entry",
+            placeholder="Example: Premium umbrellas for UK retailers",
+            height=120,
+        )
+        gc1, gc2 = st.columns(2)
+        with gc1:
+            guide_location = st.selectbox(
+                "Where do you want to find customers?",
+                ["United Kingdom", "England", "Scotland", "Wales", "Northern Ireland", "London", "Worldwide"],
+                key="guide_location_entry",
+            )
+        with gc2:
+            guide_website = st.text_input(
+                "Website (optional)",
+                key="guide_website_entry",
+                placeholder="Paste your website for extra context",
+            )
+
+        st.info("GUIDE · Start with what you sell. You can keep it simple — REACH will structure the market in the next step.")
+
+        if st.button("Continue to market strategy →", key="guide_product_continue", type="primary", use_container_width=True):
+            if not guide_product.strip():
+                st.warning("Enter a product, service or business first.")
+            else:
+                # Store across the common demo keys so the rest of the existing app can use it.
+                st.session_state.product_input = guide_product.strip()
+                st.session_state.product_description = guide_product.strip()
+                st.session_state.demo_location = guide_location
+                st.session_state.demo_website = guide_website.strip()
+                try:
+                    try:
+                        guide_analysis = analyse_product(
+                            description=guide_product.strip(),
+                            location=guide_location,
+                            website=guide_website.strip(),
+                        )
+                    except TypeError:
+                        guide_analysis = analyse_product(guide_product.strip())
+                    st.session_state.analysis = guide_analysis
+                    st.session_state.product_analysis = guide_analysis
+                except Exception:
+                    st.session_state.analysis = st.session_state.get("analysis") or {}
+                st.session_state.selected_location = guide_location
+                st.session_state.website = guide_website.strip()
+                st.session_state.reach_tour_active = True
+                st.session_state.reach_tour_step = 2
+                st.session_state["_reach_scroll_target"] = "reach-market-strategy"
+                st.session_state.page = "Market Ready"
+                st.rerun()
+
+    if st.button("← Back to landing page", key="guide_product_back"):
+        st.session_state.page = "Landing"
+        st.rerun()
+
 elif st.session_state.page == "Landing":
-    st.info("Portfolio Demo · Uses sample data only. No external AI, enrichment or contact APIs are called.")
-    # ============================================================
-    # REACH — ANIMATED PREMIUM LANDING PAGE
-    # ============================================================
+    if not st.session_state.get("reach_tour_active", False):
+        if st.button("ⓘ Start step-by-step guide", key="landing_start_guide"):
+            st.session_state.reach_tour_active = True
+            st.session_state.reach_tour_step = 1
+            st.rerun()
+
+
+    # Landing-card routing. Existing visual cards remain unchanged; clicks now have destinations.
+    landing_go = st.query_params.get("go")
+    if landing_go:
+        route_map = {
+            "product": "Public Product",
+            "how": "Public How",
+            "solutions": "Public Solutions",
+            "resources": "Public Resources",
+            "pricing": "Public Pricing",
+            "products": "Enter Product",
+            "services": "Enter Product",
+            "businesses": "Enter Product",
+            "software": "Enter Product",
+            "agencies": "Enter Product",
+            "suppliers": "Enter Product",
+            "creators": "Enter Product",
+            "more": "Enter Product",
+            "healthcare": "Enter Product",
+            "professional-services": "Enter Product",
+            "manufacturing": "Enter Product",
+            "technology": "Enter Product",
+            "hospitality": "Enter Product",
+            "retail": "Enter Product",
+            "education": "Enter Product",
+            "construction": "Enter Product",
+            "finance": "Enter Product",
+            "save-time": "Research",
+            "quality-opportunities": "Companies",
+            "grow-faster": "Outreach",
+            "focus": "Opportunities",
+        }
+        destination = route_map.get(str(landing_go))
+        if destination:
+            st.query_params.clear()
+            nav_to(destination)
+
 
     st.markdown("""
     <style>
@@ -2830,7 +4309,7 @@ elif st.session_state.page == "Landing":
     </style>
     """, unsafe_allow_html=True)
 
-    st.markdown("""<div class="nav"><div><div class="brand">◉ REACH<b>.</b></div><div class="tag">Turn your market green.</div></div><div class="links"><span>Product</span><span>How it works</span><span>Solutions⌄</span><span>Resources⌄</span><span>Pricing</span></div><div class="actions">Secure workspace</div></div>
+    st.markdown("""<div class="nav"><div><div class="brand">◉ REACH<b>.</b></div><div class="tag">Turn your market green.</div></div><div class="links"><span><a class="reach-nav-link" href="?go=product">Product</a></span><span><a class="reach-nav-link" href="?go=how">How it works</a></span><span><a class="reach-nav-link" href="?go=solutions">Solutions⌄</a></span><span><a class="reach-nav-link" href="?go=resources">Resources⌄</a></span><span><a class="reach-nav-link" href="?go=pricing">Pricing</a></span></div><div class="actions">Secure workspace</div></div>
     <div class="hero"><div class="kicker">AI-POWERED MARKET DEVELOPMENT</div><div class="title">Your customers are out there.<br><b>REACH</b> finds them.</div><div class="sub">Tell REACH about your product, service or business. It discovers relevant organisations, researches who to reach, helps contact them and tracks every opportunity — all in one place.</div></div>
     <div class="demo-label">SEE REACH IN ACTION</div>""", unsafe_allow_html=True)
 
@@ -2965,9 +4444,9 @@ elif st.session_state.page == "Landing":
     <div class="mini-proof"><div class="proof"><b>01 · Understand</b>REACH works out <em>who is likely to need</em> what you offer.</div><div class="proof"><b>02 · Discover</b>It searches for relevant organisations instead of leaving you with manual research.</div><div class="proof"><b>03 · Work the market</b>Research, contact and opportunity tracking can then happen in one workflow.</div></div>
     """, unsafe_allow_html=True)
 
-    st.markdown("""<div class="chips"><span class="chip">Products</span><span class="chip">Services</span><span class="chip">Businesses</span><span class="chip">Software</span><span class="chip">Agencies</span><span class="chip">Suppliers</span><span class="chip">Creators</span><span class="chip">and more</span></div>
+    st.markdown("""<div class="chips"><span class="chip"><a class="reach-card-link" href="?go=products">Products</a></span><span class="chip"><a class="reach-card-link" href="?go=services">Services</a></span><span class="chip"><a class="reach-card-link" href="?go=businesses">Businesses</a></span><span class="chip"><a class="reach-card-link" href="?go=software">Software</a></span><span class="chip"><a class="reach-card-link" href="?go=agencies">Agencies</a></span><span class="chip"><a class="reach-card-link" href="?go=suppliers">Suppliers</a></span><span class="chip"><a class="reach-card-link" href="?go=creators">Creators</a></span><span class="chip"><a class="reach-card-link" href="?go=more">and more</a></span></div>
     <div class="ind-title">Used across industries</div><div class="ind-copy">REACH works for products, services, businesses and more.</div>
-    <div class="industries"><div class="industry"><div class="ii">✚</div><div class="in">Healthcare</div></div><div class="industry"><div class="ii">▣</div><div class="in">Professional Services</div></div><div class="industry"><div class="ii">♜</div><div class="in">Manufacturing</div></div><div class="industry"><div class="ii">▱</div><div class="in">Technology</div></div><div class="industry"><div class="ii">☕</div><div class="in">Hospitality</div></div><div class="industry"><div class="ii">♙</div><div class="in">Retail</div></div><div class="industry"><div class="ii">◆</div><div class="in">Education</div></div><div class="industry"><div class="ii">⌂</div><div class="in">Construction</div></div><div class="industry"><div class="ii">▥</div><div class="in">Finance</div></div><div class="industry"><div class="ii">•••</div><div class="in">and more</div></div></div>
+    <div class="industries"><div class="industry"><div class="ii">✚</div><div class="in"><a class="reach-card-link" href="?go=healthcare">Healthcare</a></div></div><div class="industry"><div class="ii">▣</div><div class="in"><a class="reach-card-link" href="?go=professional-services">Professional Services</a></div></div><div class="industry"><div class="ii">♜</div><div class="in"><a class="reach-card-link" href="?go=manufacturing">Manufacturing</a></div></div><div class="industry"><div class="ii">▱</div><div class="in"><a class="reach-card-link" href="?go=technology">Technology</a></div></div><div class="industry"><div class="ii">☕</div><div class="in"><a class="reach-card-link" href="?go=hospitality">Hospitality</a></div></div><div class="industry"><div class="ii">♙</div><div class="in"><a class="reach-card-link" href="?go=retail">Retail</a></div></div><div class="industry"><div class="ii">◆</div><div class="in"><a class="reach-card-link" href="?go=education">Education</a></div></div><div class="industry"><div class="ii">⌂</div><div class="in"><a class="reach-card-link" href="?go=construction">Construction</a></div></div><div class="industry"><div class="ii">▥</div><div class="in"><a class="reach-card-link" href="?go=finance">Finance</a></div></div><div class="industry"><div class="ii">•••</div><div class="in"><a class="reach-card-link" href="?go=more">and more</a></div></div></div>
     <div class="benefits"><div class="benefit"><b>◷ &nbsp; Save hours of manual work</b><span>Let REACH do the research, outreach and tracking for you.</span></div><div class="benefit"><b>♙ &nbsp; Find higher quality opportunities</b><span>Discover organisations that actually need what you do.</span></div><div class="benefit"><b>▥ &nbsp; Grow faster</b><span>Turn research into real conversations and customers.</span></div><div class="benefit"><b>◎ &nbsp; Focus on what matters</b><span>Spend less time searching and more time building relationships.</span></div></div>""", unsafe_allow_html=True)
 
 
@@ -2997,6 +4476,9 @@ elif st.session_state.page == "Landing":
                 st.session_state.market_results = []
                 st.session_state.market_built = False
                 st.session_state.market_visible_count = 10
+                if st.session_state.get("reach_tour_active", False):
+                    st.session_state.reach_tour_step = 2
+                    st.session_state["_reach_scroll_target"] = "reach-market-strategy"
                 nav_to("Market Ready")
 
             except Exception as e:
@@ -3009,10 +4491,89 @@ elif st.session_state.page == "Landing":
 # REACH OPERATING HOME — Apollo-depth, REACH design
 # ============================================================
 
+
+    landing_section = st.session_state.get("landing_section")
+    if landing_section:
+        if landing_section == "product":
+            with st.container(border=True):
+                st.markdown("## Product")
+                st.write("REACH brings market discovery, company research, decision-maker discovery, outreach preparation and opportunity tracking into one workspace.")
+                if st.button("Explore the product →", key="landing_product_cta"):
+                    nav_to("Home")
+        elif landing_section == "how":
+            with st.container(border=True):
+                st.markdown("## How it works")
+                st.markdown("**1. Describe your market**  →  **2. Discover organisations**  →  **3. Find decision-makers**  →  **4. Prepare outreach**  →  **5. Track opportunities**")
+                if st.button("Try the workflow →", key="landing_how_cta"):
+                    nav_to("Home")
+        elif landing_section == "solutions":
+            with st.container(border=True):
+                st.markdown("## Solutions")
+                st.write("Built for market development, business development, sales research, partnerships and teams that need a systematic way to find and work their market.")
+                if st.button("Explore solutions →", key="landing_solutions_cta"):
+                    nav_to("Home")
+        elif landing_section == "resources":
+            with st.container(border=True):
+                st.markdown("## Resources")
+                st.write("Explore the portfolio demo to see REACH's market workflow, REACH AI, companies, people, outreach and pipeline experience.")
+                if st.button("Open portfolio demo →", key="landing_resources_cta"):
+                    nav_to("Home")
+        elif landing_section == "pricing":
+            with st.container(border=True):
+                st.markdown("## Pricing")
+                st.write("Portfolio demo only — commercial pricing has not been launched.")
+                if st.button("Explore demo →", key="landing_pricing_cta"):
+                    nav_to("Home")
+
+
 elif st.session_state.page == "Home":
-    app_topbar()
     total = market_total()
     discovered = total if total else 0
+
+    # QUICK ACTIONS — deliberately above the global search bar.
+    st.markdown("""
+    <div class="reach-qa-title">Quick actions</div>
+    """, unsafe_allow_html=True)
+
+    qa1, qa2, qa3, qa4, qa5 = st.columns(5, gap="small")
+    with qa1:
+        if st.button("▦  Find new companies   →", key="home_find_companies", use_container_width=True):
+            nav_to("Enter Product")
+    with qa2:
+        if st.button("♙  Find decision-makers   →", key="home_find_people", use_container_width=True):
+            nav_to("People")
+    with qa3:
+        if st.button("➤  Start a sequence   →", key="home_start_sequence", use_container_width=True):
+            nav_to("Outreach")
+    with qa4:
+        if st.button("⇧  Import a list   →", key="home_import_list", use_container_width=True):
+            nav_to("Lists")
+    with qa5:
+        if st.button("▣  Book a meeting   →", key="home_book_meeting", use_container_width=True):
+            nav_to("Meetings")
+
+    app_topbar()
+
+    if st.session_state.get("show_reach_guide", True):
+        first_time_guide(
+            "New to REACH? Start here.",
+            "This guide shows the normal journey through REACH. You can hide it whenever you are comfortable.",
+            [
+                ("1", "Find your market", "Describe what you sell and discover relevant organisations."),
+                ("2", "Research", "Let REACH assess organisations and gather useful market intelligence."),
+                ("3", "Find people", "Identify the decision-makers and roles worth reaching."),
+                ("4", "Outreach", "Prepare personalised messages and follow-ups."),
+                ("5", "Track", "Manage replies, meetings and opportunities in your pipeline."),
+            ],
+            "show_reach_guide",
+            "Discover",
+        )
+    else:
+        if st.button("ⓘ Show REACH guide", key="show_home_guide"):
+            st.session_state.show_reach_guide = True
+            st.session_state.reach_tour_active = False
+            st.rerun()
+
 
     st.markdown("""
     <div class="home-title">Welcome to REACH 👋</div>
@@ -3028,57 +4589,130 @@ elif st.session_state.page == "Home":
       <div class="kpi"><b style="color:#ff8790">0</b><span>Meetings booked</span></div>
       <div class="kpi"><b style="color:#f3c84b">0</b><span>Deals in pipeline</span></div>
     </div>
+    """)
 
-    <div class="home-grid">
-      <section class="home-card">
-        <div class="home-card-head"><h3>Recent activity</h3><a>View all →</a></div>
-        <div class="mini-tabs"><span class="mini-tab on">All</span><span class="mini-tab">Emails</span><span class="mini-tab">Calls</span><span class="mini-tab">Meetings</span><span class="mini-tab">Replies</span></div>
-        <div class="activity-item"><div class="act-icon">⌕</div><div><b>Your market workspace is ready</b><span>Build or continue researching your target market</span></div><em>Now</em></div>
-        <div class="activity-item"><div class="act-icon">▦</div><div><b>{discovered} organisations discovered</b><span>Companies House market discovery</span></div><em>Today</em></div>
-        <div class="activity-item"><div class="act-icon">➤</div><div><b>Outreach is waiting for contacts</b><span>Research decision-makers before launching</span></div><em>Next</em></div>
-      </section>
+    # Three dashboard cards. Header actions are real Streamlit buttons.
+    c1, c2, c3 = st.columns([1.08, 1.08, .92], gap="small")
 
-      <section class="home-card">
-        <div class="home-card-head"><h3>Tasks for today</h3><a>View all →</a></div>
-        <div class="mini-tabs"><span class="mini-tab on">All</span><span class="mini-tab">Research</span><span class="mini-tab">Follow-ups</span></div>
-        <div class="task-item"><div class="act-icon">☑</div><div><b>Review your market strategy</b><span>Confirm customer segments and search terms</span></div><em>09:30</em></div>
-        <div class="task-item"><div class="act-icon">♙</div><div><b>Research decision-makers</b><span>Find the right people inside discovered organisations</span></div><em>11:00</em></div>
-        <div class="task-item"><div class="act-icon">✉</div><div><b>Prepare outreach</b><span>Create your first personalised sequence</span></div><em>13:00</em></div>
-        <div class="task-item"><div class="act-icon">▥</div><div><b>Review market coverage</b><span>See which segments still need discovery</span></div><em>16:00</em></div>
-      </section>
+    with c1:
+        with st.container(border=True):
+            h1, h2 = st.columns([4, 1.25])
+            with h1:
+                st.markdown("### Recent activity")
+            with h2:
+                if st.button("View all →", key="home_activity_all", use_container_width=True):
+                    nav_to("Conversations")
+            at1, at2, at3, at4, at5 = st.columns(5, gap="small")
+            with at1:
+                if st.button("All", key="home_act_all", use_container_width=True):
+                    nav_to("Conversations")
+            with at2:
+                if st.button("Emails", key="home_act_emails", use_container_width=True):
+                    nav_to("Emails")
+            with at3:
+                if st.button("Calls", key="home_act_calls", use_container_width=True):
+                    nav_to("Calls")
+            with at4:
+                if st.button("Meetings", key="home_act_meetings", use_container_width=True):
+                    nav_to("Meetings")
+            with at5:
+                if st.button("Replies", key="home_act_replies", use_container_width=True):
+                    nav_to("Conversations")
+            st.markdown("""
+            <div class="activity-item"><div class="act-icon">⌕</div><div><b>Your market workspace is ready</b><span>Build or continue researching your target market</span></div><em>Now</em></div>
+            <div class="activity-item"><div class="act-icon">▦</div><div><b>""" + str(discovered) + r""" organisations discovered</b><span>Companies House market discovery</span></div><em>Today</em></div>
+            <div class="activity-item"><div class="act-icon">➤</div><div><b>Outreach is waiting for contacts</b><span>Research decision-makers before launching</span></div><em>Next</em></div>
+            """, unsafe_allow_html=True)
+            ac1, ac2, ac3 = st.columns(3, gap="small")
+            with ac1:
+                if st.button("Research market →", key="home_market_ready_action", use_container_width=True):
+                    nav_to("Market Strategy")
+            with ac2:
+                if st.button("View companies →", key="home_orgs_action", use_container_width=True):
+                    nav_to("Companies")
+            with ac3:
+                if st.button("Find contacts →", key="home_contacts_action", use_container_width=True):
+                    nav_to("People")
 
-      <section>
-        <div class="home-card">
-          <div class="home-card-head"><h3>Pipeline status</h3><a>View pipeline →</a></div>
-          <div class="pipe-line"><span>🟢 Interested</span><b>0</b></div>
-          <div class="pipe-line"><span>🔵 Meeting booked</span><b>0</b></div>
-          <div class="pipe-line"><span>🟣 Proposal sent</span><b>0</b></div>
-          <div class="pipe-line"><span>🟡 Negotiation</span><b>0</b></div>
-          <div class="pipe-line"><span>● Closed won</span><b>0</b></div>
-        </div>
-      </section>
+    with c2:
+        with st.container(border=True):
+            h1, h2 = st.columns([4, 1.25])
+            with h1:
+                st.markdown("### Tasks for today")
+            with h2:
+                if st.button("View all →", key="home_tasks_all", use_container_width=True):
+                    nav_to("Tasks")
+            tt1, tt2, tt3 = st.columns(3, gap="small")
+            with tt1:
+                if st.button("All", key="home_task_all_tab", use_container_width=True):
+                    nav_to("Tasks")
+            with tt2:
+                if st.button("Research", key="home_task_research", use_container_width=True):
+                    nav_to("Research")
+            with tt3:
+                if st.button("Follow-ups", key="home_task_followups", use_container_width=True):
+                    nav_to("Tasks")
+            st.markdown("""
+            <div class="task-item"><div class="act-icon">☑</div><div><b>Review your market strategy</b><span>Confirm customer segments and search terms</span></div><em>09:30</em></div>
+            <div class="task-item"><div class="act-icon">♙</div><div><b>Research decision-makers</b><span>Find the right people inside discovered organisations</span></div><em>11:00</em></div>
+            <div class="task-item"><div class="act-icon">✉</div><div><b>Prepare outreach</b><span>Create your first personalised sequence</span></div><em>13:00</em></div>
+            <div class="task-item"><div class="act-icon">▥</div><div><b>Review market coverage</b><span>See which segments still need discovery</span></div><em>16:00</em></div>
+            """, unsafe_allow_html=True)
+            ta1, ta2, ta3, ta4 = st.columns(4, gap="small")
+            with ta1:
+                if st.button("Strategy →", key="home_review_strategy_action", use_container_width=True):
+                    nav_to("Market Strategy")
+            with ta2:
+                if st.button("People →", key="home_research_people_action", use_container_width=True):
+                    nav_to("People")
+            with ta3:
+                if st.button("Outreach →", key="home_prepare_outreach_action", use_container_width=True):
+                    nav_to("Outreach")
+            with ta4:
+                if st.button("Coverage →", key="home_coverage_action", use_container_width=True):
+                    nav_to("Market Coverage")
 
-      <section class="home-card" style="grid-column:1/3">
-        <div class="home-card-head"><h3>Recommended companies for you</h3><a>View all →</a></div>
-        <div style="font-size:10px;color:#78877e">Based on your market strategy and discovery results.</div>
+    with c3:
+        with st.container(border=True):
+            h1, h2 = st.columns([3, 1.55])
+            with h1:
+                st.markdown("### Pipeline status")
+            with h2:
+                if st.button("View pipeline →", key="home_pipeline", use_container_width=True):
+                    nav_to("Opportunities")
+            st.markdown("""
+            <div class="pipe-line"><span>🟢 Interested</span><b>0</b></div>
+            <div class="pipe-line"><span>🔵 Meeting booked</span><b>0</b></div>
+            <div class="pipe-line"><span>🟣 Proposal sent</span><b>0</b></div>
+            <div class="pipe-line"><span>🟡 Negotiation</span><b>0</b></div>
+            <div class="pipe-line"><span>● Closed won</span><b>0</b></div>
+            """, unsafe_allow_html=True)
+            pp1, pp2 = st.columns(2, gap="small")
+            with pp1:
+                if st.button("Open pipeline →", key="home_open_pipeline_action", use_container_width=True):
+                    nav_to("Opportunities")
+            with pp2:
+                if st.button("Conversations →", key="home_pipeline_convos_action", use_container_width=True):
+                    nav_to("Conversations")
+
+    # Recommended companies, now with a real View all action.
+    with st.container(border=True):
+        rh1, rh2 = st.columns([6, 1])
+        with rh1:
+            st.markdown("### Recommended companies for you")
+            st.caption("Based on your market strategy and discovery results.")
+        with rh2:
+            if st.button("View all →", key="home_companies_all", use_container_width=True):
+                nav_to("Companies")
+
+        st.html(f"""
         <div class="recommend-table">
           <div class="rec-row head"><span>Company</span><span>Location</span><span>Status</span><span>Source</span><span>Fit</span><span>Action</span></div>
           <div class="rec-row"><strong>{company_name(st.session_state.market_results[0]) if st.session_state.market_results else "Build your first market"}</strong><span>{company_address(st.session_state.market_results[0]) if st.session_state.market_results else "United Kingdom"}</span><span>Discovered</span><span>Companies House</span><span class="fit">AI</span><span>Research →</span></div>
           <div class="rec-row"><strong>{company_name(st.session_state.market_results[1]) if len(st.session_state.market_results)>1 else "More recommendations will appear here"}</strong><span>{company_address(st.session_state.market_results[1]) if len(st.session_state.market_results)>1 else "—"}</span><span>Discovered</span><span>Companies House</span><span class="fit">AI</span><span>Research →</span></div>
           <div class="rec-row"><strong>{company_name(st.session_state.market_results[2]) if len(st.session_state.market_results)>2 else "REACH learns from your market"}</strong><span>{company_address(st.session_state.market_results[2]) if len(st.session_state.market_results)>2 else "—"}</span><span>Discovered</span><span>Companies House</span><span class="fit">AI</span><span>Research →</span></div>
         </div>
-      </section>
-
-      <section class="home-card">
-        <div class="home-card-head"><h3>Quick actions</h3></div>
-        <div class="quick-item"><span>▦</span><b>Find new companies</b><span>→</span></div>
-        <div class="quick-item"><span>♙</span><b>Find decision-makers</b><span>→</span></div>
-        <div class="quick-item"><span>➤</span><b>Start a sequence</b><span>→</span></div>
-        <div class="quick-item"><span>⇧</span><b>Import a list</b><span>→</span></div>
-        <div class="quick-item"><span>▣</span><b>Book a meeting</b><span>→</span></div>
-      </section>
-    </div>
-    """)
+        """)
 
 # ============================================================
 # 02 — ENTER PRODUCT
@@ -3207,6 +4841,7 @@ elif st.session_state.page == "Analysing":
 
 elif st.session_state.page == "Market Ready":
     app_topbar()
+    render_reach_scroll_anchor("reach-market-strategy")
 
     # analyse_product() stores the generated market strategy in `analysis`.
     # Use that real result first; older state names remain as fallbacks.
@@ -3365,10 +5000,19 @@ elif st.session_state.page == "Market Ready":
     b1, b2 = st.columns([4.5, 1.5])
     with b1:
         if st.button("Build my market →", type="primary", use_container_width=True, key="strategy_build_market"):
+            if DEMO_MODE:
+                complete_demo_market_build()
+
+            # Private REACH: recover/reuse anything already saved for this workspace.
+            # This prevents repeated Companies House searches and duplicate writes
+            # after a browser/server disconnect during a previous build.
+            # The public portfolio demo exits above and never reaches this API path.
             # First recover/reuse anything already saved for this workspace.
             # This prevents repeated Companies House searches and duplicate writes
             # after a browser/server disconnect during a previous build.
             search_terms = discovery_terms or customer_segments
+            if DEMO_MODE:
+                st.stop()
             if not search_terms:
                 st.error("REACH needs at least one discovery search before it can build the market.")
             else:
@@ -3418,7 +5062,134 @@ elif st.session_state.page == "Market Ready":
 
 
 elif st.session_state.page == "Companies":
+    # Public portfolio demo: generate fictional organisations locally from the
+    # visitor's market/product query. No OpenAI, Apify, Hunter or Companies House call.
+    def _demo_market_for_query(query):
+        q = (query or "").strip().lower()
+
+        market_sets = {
+            "umbrella": [
+                ("Rain & Roam Retail Ltd", "London", "Outdoor & travel retail"),
+                ("Canopy Goods Co", "Manchester", "Accessories retailer"),
+                ("Northshore Outdoor Stores", "Birmingham", "Outdoor retailer"),
+                ("City Department Retail Group", "Leeds", "Department store"),
+                ("Voyager Travel Essentials", "Bristol", "Travel accessories"),
+                ("Weatherwise Wholesale Ltd", "Glasgow", "Consumer goods wholesaler"),
+                ("Harbour Lifestyle Stores", "Liverpool", "Lifestyle retailer"),
+                ("Field & Street Outfitters", "Edinburgh", "Outdoor & urban retail"),
+            ],
+            "perfume": [
+                ("Aurora Fragrance Studio", "London", "Fragrance retailer"),
+                ("Scent & Co Retail", "Manchester", "Beauty retailer"),
+                ("Maison Verde Beauty", "Birmingham", "Beauty & fragrance"),
+                ("North & Bloom Cosmetics", "Leeds", "Cosmetics retailer"),
+                ("Velvet Note Perfumery", "Bristol", "Perfumery"),
+                ("Lumen Luxury Goods", "Edinburgh", "Luxury retail"),
+            ],
+            "veterinary": [
+                ("Greenfield Veterinary Practice Ltd", "London", "Veterinary practice"),
+                ("Riverside Animal Care Ltd", "Manchester", "Animal care"),
+                ("Oakwood Veterinary Group Ltd", "Birmingham", "Veterinary group"),
+                ("Northgate Animal Hospital Ltd", "Leeds", "Animal hospital"),
+                ("Harbour Vets Ltd", "Bristol", "Veterinary practice"),
+                ("Meadow Veterinary Centre Ltd", "Edinburgh", "Veterinary centre"),
+            ],
+            "account": [
+                ("Brightway Creative Studio", "London", "Creative agency"),
+                ("Northline Construction Services", "Manchester", "Construction"),
+                ("Willow Independent Retail Ltd", "Birmingham", "Retail"),
+                ("Harbour Hospitality Group", "Bristol", "Hospitality"),
+                ("Atlas Consulting Partners", "Leeds", "Professional services"),
+                ("Meadow Property Services", "Edinburgh", "Property services"),
+            ],
+            "software": [
+                ("Northstar Operations Ltd", "London", "Business services"),
+                ("Harbour Logistics Group", "Manchester", "Logistics"),
+                ("Atlas Professional Services", "Birmingham", "Professional services"),
+                ("Fieldstone Manufacturing", "Leeds", "Manufacturing"),
+                ("Lumen Retail Group", "Bristol", "Retail"),
+                ("Cedar Hospitality Ltd", "Edinburgh", "Hospitality"),
+            ],
+        }
+
+        selected_key = next((k for k in market_sets if k in q), None)
+        if selected_key:
+            rows = market_sets[selected_key]
+        else:
+            # Generic but query-aware fictional market, so ANY visitor input changes the market.
+            label = " ".join(w.capitalize() for w in re.findall(r"[A-Za-z0-9]+", q)[:3]) or "Target Market"
+            rows = [
+                (f"{label} Retail Partners", "London", "Retail"),
+                (f"North {label} Group", "Manchester", "Business services"),
+                (f"{label} Distribution Co", "Birmingham", "Distribution"),
+                (f"City {label} Solutions", "Leeds", "Commercial services"),
+                (f"{label} Trade Partners", "Bristol", "Wholesale"),
+                (f"Harbour {label} Ltd", "Edinburgh", "Independent business"),
+            ]
+
+        results = []
+        for i, (name, city, category) in enumerate(rows, 1):
+            results.append({
+                "company_name": name,
+                "name": name,
+                "company_number": f"DEMO{i:04d}",
+                "address": f"{city}, United Kingdom",
+                "registered_office_address": f"{city}, United Kingdom",
+                "company_status": "active",
+                "status": "active",
+                "relevance_score": max(78, 97 - (i - 1) * 3),
+                "source": "Portfolio demo",
+                "category": category,
+                "website": f"https://example.com/demo-{i}",
+                "demo_query": query,
+            })
+        return results
+
+    # Use the global top-search text as a demo market request when it changes.
+    demo_query = (
+        st.session_state.get("global_search")
+        or st.session_state.get("search_query")
+        or st.session_state.get("product_description")
+        or st.session_state.get("product_input")
+        or ""
+    ).strip()
+
+    previous_demo_query = st.session_state.get("_demo_market_query", "")
+    if DEMO_MODE and demo_query and demo_query.lower() != previous_demo_query.lower():
+        st.session_state.market_results = _demo_market_for_query(demo_query)
+        st.session_state.market_built = True
+        st.session_state.company_status_filter = "All companies"
+        st.session_state["_demo_market_query"] = demo_query
+
+    if DEMO_MODE and not st.session_state.get("market_results"):
+        st.session_state.market_results = _demo_market_for_query("business services")
+        st.session_state.market_built = True
+        st.session_state.company_status_filter = "All companies"
+        st.session_state["_demo_market_query"] = "business services"
+
     app_topbar()
+    render_reach_scroll_anchor("reach-companies-work")
+
+    if st.session_state.get("show_companies_guide", True):
+        first_time_guide(
+            "GUIDE: What do I do on the Companies page?",
+            "REACH has found organisations for your market. You can research everything at once, choose a few companies, or open one company individually.",
+            [
+                ("1", "Review results", "Look through the organisations REACH has discovered."),
+                ("2", "Research all", "Leave every checkbox empty and press Research with AI to research the whole market."),
+                ("3", "Research selected", "Tick companies first if you only want REACH to research those organisations."),
+                ("4", "Find people", "After research, continue to decision-makers and contact routes."),
+                ("5", "Start outreach", "Prepare messages, follow-ups and track responses."),
+            ],
+            "show_companies_guide",
+            "Discover",
+        )
+        st.info("TIP · Want REACH to do them all? Leave the checkboxes empty and press **Research with AI**. Tick companies only when you want to research a smaller selection.")
+    else:
+        if st.button("ⓘ Show page guide", key="show_companies_guide_btn"):
+            st.session_state.show_companies_guide = True
+            st.rerun()
+
 
     page_header(
         "FIND YOUR MARKET",
@@ -3427,6 +5198,9 @@ elif st.session_state.page == "Companies":
     )
 
     market = st.session_state.market_results
+
+    if DEMO_MODE:
+        st.caption("Portfolio Demo · Results are fictional sample organisations generated locally from your market query. No live company-discovery API is called.")
 
     # --------------------------------------------------------
     # CLICKABLE TOOLBAR
@@ -3593,7 +5367,7 @@ elif st.session_state.page == "Companies":
             filtered = []
 
     if not market:
-        st.info("Build your market first. REACH will show real Companies House results here.")
+        st.info("No demo companies are loaded yet. Open Market Strategy to build a sample market.")
         if st.button("Go to market strategy →", type="primary"):
             nav_to("Market Ready")
     elif not filtered:
@@ -3651,6 +5425,110 @@ elif st.session_state.page == "Companies":
 # ============================================================
 # COMPANY PROFILE — clickable organisation record
 # ============================================================
+
+
+    # --------------------------------------------------------
+    # COMPANY SELECTION -> EXACT RESEARCH SCOPE
+    # --------------------------------------------------------
+    _market_rows = st.session_state.get("market_results", [])
+    _company_names = [
+        (c.get("company_name") or c.get("name"))
+        for c in _market_rows
+        if (c.get("company_name") or c.get("name"))
+    ]
+
+    # Read the exact checkboxes rendered in the company table.
+    _checked_names = []
+    for _i, _company in enumerate(_market_rows):
+        _name = _company.get("company_name") or _company.get("name")
+        _number = _company.get("company_number") or f"DEMO{_i+1:04d}"
+
+        # Main current key plus backwards-compatible keys from earlier REACH builds.
+        _keys = [
+            f"select_company_{_i}_{_number}",
+            f"company_select_{_i}_{_number}",
+            f"company_select_{_i}",
+            f"select_company_{_i}",
+            f"company_checkbox_{_i}",
+        ]
+        if _name and any(st.session_state.get(_k) is True for _k in _keys):
+            _checked_names.append(_name)
+
+    _checked_names = list(dict.fromkeys(_checked_names))
+    st.session_state.selected_company_names = _checked_names
+
+    st.markdown("---")
+    with st.container(border=True):
+        if _checked_names:
+            _n = len(_checked_names)
+            st.markdown(
+                f"### Research selected organisations"
+            )
+            st.caption(
+                f"You selected {_n} organisation{'s' if _n != 1 else ''}. "
+                "Only these will be carried into the Research workspace."
+            )
+
+            _chip_cols = st.columns(min(3, _n))
+            for _i, _name in enumerate(_checked_names):
+                with _chip_cols[_i % len(_chip_cols)]:
+                    st.markdown(f"✓ **{_name}**")
+
+            if st.button(
+                f"Research selected ({_n}) →",
+                key="research_selected_exact",
+                type="primary",
+                use_container_width=True,
+            ):
+                st.session_state.research_scope = "selected"
+                st.session_state.research_target_names = list(_checked_names)
+                st.session_state.research_target_company = _checked_names[0]
+                st.session_state.demo_research_results = {}
+                st.session_state.researched_company_names = []
+                st.session_state.pop("research_comparison_result", None)
+                st.session_state.page = "Research"
+                st.session_state.reach_tour_step = 4
+                st.session_state["_reach_scroll_target"] = "reach-research-work"
+                st.rerun()
+
+            if st.button(
+                f"Research all discovered ({len(_company_names)}) instead",
+                key="research_all_override",
+                use_container_width=True,
+            ):
+                st.session_state.research_scope = "all"
+                st.session_state.research_target_names = list(_company_names)
+                st.session_state.research_target_company = _company_names[0] if _company_names else None
+                st.session_state.demo_research_results = {}
+                st.session_state.researched_company_names = []
+                st.session_state.pop("research_comparison_result", None)
+                st.session_state.page = "Research"
+                st.session_state.reach_tour_step = 4
+                st.session_state["_reach_scroll_target"] = "reach-research-work"
+                st.rerun()
+        else:
+            st.markdown("### Research the discovered market")
+            st.caption(
+                "Tick companies above to research a smaller selection, "
+                "or research the whole discovered market."
+            )
+            if st.button(
+                f"Research all ({len(_company_names)}) →",
+                key="research_all_no_selection",
+                type="primary",
+                use_container_width=True,
+            ):
+                st.session_state.research_scope = "all"
+                st.session_state.research_target_names = list(_company_names)
+                st.session_state.research_target_company = _company_names[0] if _company_names else None
+                st.session_state.demo_research_results = {}
+                st.session_state.researched_company_names = []
+                st.session_state.pop("research_comparison_result", None)
+                st.session_state.page = "Research"
+                st.session_state.reach_tour_step = 4
+                st.session_state["_reach_scroll_target"] = "reach-research-work"
+                st.rerun()
+
 
 elif st.session_state.page == "Company Profile":
     app_topbar()
@@ -3727,6 +5605,23 @@ elif st.session_state.page == "Company Profile":
 
 elif st.session_state.page == "People":
     app_topbar()
+
+    # Companies carried through Companies -> Research -> People.
+    _people_company_names = (
+        st.session_state.get("researched_company_names")
+        or st.session_state.get("research_target_names")
+        or st.session_state.get("selected_company_names")
+        or []
+    )
+    _people_company_names = list(dict.fromkeys([n for n in _people_company_names if n]))
+
+    if _people_company_names:
+        st.info(
+            f"CURRENT SCOPE · {len(_people_company_names)} selected organisation"
+            f"{'s' if len(_people_company_names) != 1 else ''}: "
+            + ", ".join(_people_company_names)
+        )
+    render_reach_scroll_anchor("reach-people-work")
     page_header("FIND PEOPLE", "Find people", "Identify real professional contacts inside organisations already discovered by REACH.")
 
     p1,p2,p3,p4,p5,p6 = st.columns([1,.9,1.2,1.2,.9,.9])
@@ -3769,7 +5664,16 @@ elif st.session_state.page == "People":
                 st.selectbox("Contact availability", ["Any","Verified email","Phone","Both"], key="people_contact")
             g1,g2,g3,g4 = st.columns(4)
             with g1:
-                st.text_input("Company", placeholder="Company name", key="people_company")
+                _people_company_options = (
+                    [f"All selected companies ({len(_people_company_names)})"] + _people_company_names
+                    if _people_company_names
+                    else ["All discovered companies"]
+                )
+                st.selectbox(
+                    "Company",
+                    _people_company_options,
+                    key="people_company"
+                )
             with g2:
                 st.selectbox("Market status", ["Any","Discovered","Verified","Contacted","Interested"], key="people_market_status")
             with g3:
@@ -3788,7 +5692,16 @@ elif st.session_state.page == "People":
             key="hunter_find_people"
         )
     with s2:
-        if not hunter_is_configured():
+        if DEMO_MODE:
+            if _people_company_names:
+                st.caption(
+                    f"Portfolio Demo · Preview decision-makers for {len(_people_company_names)} selected "
+                    f"organisation{'s' if len(_people_company_names) != 1 else ''}. "
+                    "No Hunter or paid contact API is called."
+                )
+            else:
+                st.caption("Portfolio Demo · Select/research companies first. No Hunter or paid contact API is called.")
+        elif not hunter_is_configured():
             st.warning("Hunter is not connected. Add HUNTER_API_KEY to .env and restart REACH.")
         elif not st.session_state.market_results:
             st.info("Build your market first so REACH has organisations to search.")
@@ -3799,27 +5712,75 @@ elif st.session_state.page == "People":
             )
 
     if search_people:
-        if not hunter_is_configured():
-            st.error("Hunter API key was not loaded. Save .env, stop Streamlit with Ctrl+C, then run it again.")
-        elif not st.session_state.market_results:
-            st.error("No companies are available yet. Build your market first.")
+        if DEMO_MODE:
+            _company_choice = st.session_state.get("people_company", "")
+            _all_selected_label = f"All selected companies ({len(_people_company_names)})"
+
+            if _company_choice == _all_selected_label:
+                _targets = list(_people_company_names)
+            elif _company_choice in _people_company_names:
+                _targets = [_company_choice]
+            else:
+                _targets = list(_people_company_names)
+
+            if not _targets:
+                st.warning("Research/select companies first so REACH knows where to find people.")
+            else:
+                _demo_people = []
+                _sample_roles = [
+                    ("Alex Morgan", "Commercial Director"),
+                    ("Jamie Patel", "Operations Lead"),
+                    ("Taylor Reed", "Owner / Director"),
+                ]
+                for _i, _company in enumerate(_targets):
+                    _name, _title = _sample_roles[_i % len(_sample_roles)]
+                    _demo_people.append({
+                        "name": _name,
+                        "first_name": _name.split()[0],
+                        "last_name": _name.split()[-1],
+                        "title": _title,
+                        "job_title": _title,
+                        "company": _company,
+                        "company_name": _company,
+                        "seniority": "Senior",
+                        "email": "",
+                        "phone": "",
+                        "linkedin": "",
+                        "verification": "Portfolio demo",
+                        "confidence": 0,
+                    })
+                st.session_state.people_results = _demo_people
+                st.session_state.people_search_errors = []
+                st.session_state.people_has_searched = True
+                st.session_state.people_scope_companies = _targets
+                st.rerun()
         else:
-            with st.spinner("Finding sample professional contacts..."):
-                found, errors = find_people_for_companies(
-                    st.session_state.market_results,
-                    max_companies=5,
-                    per_company=10,
-                )
-            st.session_state.people_results = found
-            st.session_state.people_search_errors = errors
-            st.session_state.people_has_searched = True
-            st.rerun()
+            if not hunter_is_configured():
+                st.error("Hunter API key was not loaded. Save .env, stop Streamlit with Ctrl+C, then run it again.")
+            elif not st.session_state.market_results:
+                st.error("No companies are available yet. Build your market first.")
+            else:
+                with st.spinner("Finding professional contacts..."):
+                    found, errors = find_people_for_companies(
+                        st.session_state.market_results,
+                        max_companies=5,
+                        per_company=10,
+                    )
+                st.session_state.people_results = found
+                st.session_state.people_search_errors = errors
+                st.session_state.people_has_searched = True
+                st.rerun()
 
     people = list(st.session_state.people_results)
 
     # Apply the on-page filters to the real returned records.
     q = (st.session_state.get("people_search") or "").strip().lower()
-    company_q = (st.session_state.get("people_company") or "").strip().lower()
+    _company_choice = st.session_state.get("people_company") or ""
+    company_q = (
+        ""
+        if _company_choice.startswith("All selected companies") or _company_choice == "All discovered companies"
+        else _company_choice.strip().lower()
+    )
     title_filters = [x.lower() for x in st.session_state.get("people_titles", [])]
     seniority_filters = [x.lower() for x in st.session_state.get("people_seniority", [])]
     availability = st.session_state.get("people_contact", "Any")
@@ -3894,7 +5855,7 @@ elif st.session_state.page == "People":
     elif st.session_state.people_has_searched:
         st.info("Hunter did not return contacts matching these filters. Try clearing filters or searching more organisations.")
     else:
-        st.info("Click “Find people with Hunter” to search your discovered organisations for real professional contacts.")
+        st.info("Portfolio Demo · Choose a selected company above and click Find people to preview fictional decision-makers. No Hunter credits are used.")
 
     if st.session_state.people_search_errors:
         with st.expander("Some organisations could not be searched"):
@@ -3915,6 +5876,7 @@ elif st.session_state.page == "People":
 
 elif st.session_state.page == "Outreach":
     app_topbar()
+    render_reach_scroll_anchor("reach-outreach-work")
     page_header("REACH YOUR MARKET", "Create your campaign", "Build, review and control a personalised outreach workflow.")
 
     o1,o2,o3,o4 = st.columns(4)
@@ -4004,6 +5966,7 @@ elif st.session_state.page == "Analytics":
 
 elif st.session_state.page == "Opportunities":
     app_topbar()
+    render_reach_scroll_anchor("reach-pipeline-work")
     page_header(
         "OPPORTUNITIES",
         "Turn opportunities green",
@@ -4037,6 +6000,34 @@ elif st.session_state.page == "AI":
 
     if "reach_ai_messages" not in st.session_state:
         st.session_state.reach_ai_messages = []
+    if "reach_ai_chats" not in st.session_state:
+        st.session_state.reach_ai_chats = {}
+    if "reach_ai_active_chat" not in st.session_state:
+        st.session_state.reach_ai_active_chat = None
+    if "reach_ai_chat_counter" not in st.session_state:
+        st.session_state.reach_ai_chat_counter = 0
+
+    # Ensure there is an active thread, then load its messages.
+    if not st.session_state.reach_ai_active_chat:
+        st.session_state.reach_ai_chat_counter += 1
+        first_chat_id = f"chat_{st.session_state.reach_ai_chat_counter}"
+        st.session_state.reach_ai_chats[first_chat_id] = {
+            "title": "New chat",
+            "messages": [],
+        }
+        st.session_state.reach_ai_active_chat = first_chat_id
+
+    active_chat_id = st.session_state.reach_ai_active_chat
+    if active_chat_id not in st.session_state.reach_ai_chats:
+        st.session_state.reach_ai_chats[active_chat_id] = {
+            "title": "New chat",
+            "messages": [],
+        }
+
+    # The active thread is the source of truth.
+    st.session_state.reach_ai_messages = list(
+        st.session_state.reach_ai_chats[active_chat_id].get("messages", [])
+    )
 
     # Show a few useful one-click prompts.
     q1, q2, q3, q4 = st.columns(4)
@@ -4062,18 +6053,75 @@ elif st.session_state.page == "AI":
         except Exception:
             company_context = str(selected_company)
 
-    user_prompt = st.text_area(
-        "Ask REACH AI",
-        value=quick_prompt or "",
-        placeholder="e.g. Write a first outreach email for a veterinary practice...",
-        height=115,
+    # Show the conversation first, then keep the reply box directly beneath it.
+    # This makes REACH AI behave like a normal multi-turn chat instead of a one-shot form.
+    if st.session_state.reach_ai_messages:
+        st.markdown("### Conversation")
+        for message in st.session_state.reach_ai_messages:
+            role = message.get("role", "assistant")
+            with st.chat_message(role):
+                clean_content = str(message.get("content", "")).replace("\\n", "\n")
+                st.markdown(clean_content)
+
+        if st.button("Clear conversation", key="reach_ai_clear_top"):
+            st.session_state.reach_ai_messages = []
+            st.session_state.reach_ai_chats[active_chat_id]["messages"] = []
+            st.session_state.reach_ai_chats[active_chat_id]["title"] = "New chat"
+            st.rerun()
+    else:
+        st.caption(
+            "REACH AI uses your current product and market context automatically. "
+            "Ask a follow-up naturally — for example “make it more detailed”, "
+            "“make it shorter”, “make it less salesy” or “mention that it saves time”. "
+            "Portfolio demo responses are generated locally and do not call external AI services."
+        )
+
+    # ------------------------------------------------------------
+    # REACH AI composer — normal in-flow form (not st.chat_input).
+    # This avoids Streamlit's fixed white bottom container and keeps
+    # the composer aligned with the conversation on desktop/mobile.
+    # ------------------------------------------------------------
+    st.markdown('<div class="reach-composer-label">MESSAGE REACH AI</div>', unsafe_allow_html=True)
+
+    uploaded_context = st.file_uploader(
+        "Upload context",
+        type=["pdf", "docx", "txt", "md", "csv", "xlsx", "xls"],
+        accept_multiple_files=True,
+        key=f"reach_ai_upload_{active_chat_id}",
+        help="Portfolio demo: files are used only as temporary demo context in this session. No external AI service is called.",
         label_visibility="collapsed",
-        key="reach_ai_prompt"
     )
 
-    ask = st.button("✦ Ask REACH AI →", type="primary", key="reach_ai_submit")
+    if uploaded_context:
+        file_names = [f.name for f in uploaded_context]
+        st.caption("Attached: " + " · ".join(file_names))
 
-    if ask and user_prompt.strip():
+    with st.form(key=f"reach_ai_composer_{active_chat_id}", clear_on_submit=True):
+        composer_text = st.text_area(
+            "Message REACH AI",
+            value="",
+            placeholder="Message REACH AI…",
+            height=88,
+            label_visibility="collapsed",
+            key=f"reach_ai_composer_text_{active_chat_id}",
+        )
+        send_col, hint_col = st.columns([1, 5])
+        with send_col:
+            send_message = st.form_submit_button("Send →", type="primary", use_container_width=True)
+        with hint_col:
+            st.caption("Ask a follow-up naturally. Your message clears after sending.")
+
+    # Quick-action buttons still submit immediately. The form submits only when Send is pressed.
+    user_prompt = quick_prompt or (composer_text if send_message else "") or ""
+
+    # Add safe local attachment context to the prompt. We deliberately do not
+    # parse PDF/DOCX/XLSX contents in the public demo; the real/private product
+    # can connect these files to the real AI/document pipeline later.
+    if user_prompt.strip() and uploaded_context:
+        attachment_names = ", ".join(f.name for f in uploaded_context)
+        user_prompt = f"{user_prompt.strip()}\n\n[Attached demo files: {attachment_names}]"
+
+    if user_prompt.strip():
         # Portfolio demo: local conversational simulation only.
         # No OpenAI/Hunter/Companies House/Supabase call is made here.
         prompt = user_prompt.strip()
@@ -4143,6 +6191,17 @@ elif st.session_state.page == "AI":
                 )
             return f"**Subject: {subject}**\n\n{opening}{body}{close}"
 
+        # In the public portfolio build, uploaded files are accepted as temporary
+        # context but are not sent to an external model. This keeps recruiter testing
+        # safe and cost-free while demonstrating the intended product workflow.
+        attachment_note = ""
+        if "[Attached demo files:" in prompt:
+            attachment_note = (
+                "\n\n**Attached context:** I can see the file names you attached in this portfolio demo. "
+                "The public demo does not send or analyse their contents with an external AI service. "
+                "In the private REACH product, this upload flow can feed the document/data analysis pipeline."
+            )
+
         # Follow-up editing intents. These deliberately use conversation history,
         # giving the portfolio demo a genuine multi-turn feel without a paid LLM.
         is_followup = bool(previous_answer)
@@ -4180,38 +6239,38 @@ elif st.session_state.page == "AI":
             )
             if vet_context or "vet" in prompt.lower():
                 answer = (
-                    "**Subject: Helping your veterinary team reduce post-consultation admin**\\n\\n"
-                    "Hi Practice Manager,\\n\\n"
+                    "**Subject: Helping your veterinary team reduce post-consultation admin**\n\n"
+                    "Hi Practice Manager,\n\n"
                     "I’m reaching out about **VetScribe**, a veterinary workflow tool designed to help "
                     "practices reduce the time spent turning consultations into structured clinical notes "
-                    "and clear owner summaries.\\n\\n"
+                    "and clear owner summaries.\n\n"
                     "Veterinary teams often have to balance patient care with a significant amount of "
                     "documentation after each consultation. VetScribe is designed to support that workflow "
                     "by helping turn consultation information into organised draft notes, while keeping the "
-                    "vet in control of reviewing and finalising the record.\\n\\n"
+                    "vet in control of reviewing and finalising the record.\n\n"
                     "The aim is to reduce repetitive admin, make documentation more consistent and give vets "
                     "more time to focus on patients and clients rather than paperwork. It can also help create "
-                    "clearer owner-facing summaries after a consultation.\\n\\n"
+                    "clearer owner-facing summaries after a consultation.\n\n"
                     "I thought this could be relevant to your practice and would be interested to understand "
                     "how your team currently manages consultation notes and whether reducing that admin burden "
-                    "is something you are looking at.\\n\\n"
-                    "Would you be open to a short conversation or demo?\\n\\n"
-                    "Best,\\nAmeerah"
+                    "is something you are looking at.\n\n"
+                    "Would you be open to a short conversation or demo?\n\n"
+                    "Best,\nAmeerah"
                 )
             else:
                 answer = (
-                    f"**Subject: Exploring a potential workflow improvement for {selected_text}**\\n\\n"
-                    f"Hi {role_text},\\n\\n"
+                    f"**Subject: Exploring a potential workflow improvement for {selected_text}**\n\n"
+                    f"Hi {role_text},\n\n"
                     f"I’m reaching out about **{product_name}**, which is designed to help organisations "
-                    f"address **{problem}**.\\n\\n"
+                    f"address **{problem}**.\n\n"
                     "The idea is to reduce unnecessary manual work, make the process more consistent and give "
                     "teams a clearer way to manage the task from start to finish. Rather than adding another "
                     "disconnected tool, the focus is on supporting the existing workflow and making the useful "
-                    "next action easier to identify.\\n\\n"
+                    "next action easier to identify.\n\n"
                     f"Based on the current REACH market context, I thought this could be relevant to "
-                    f"**{selected_text}** and particularly to someone responsible for **{role_text}**.\\n\\n"
-                    "Would you be open to a short conversation to see whether this is relevant to your team?\\n\\n"
-                    "Best,\\nAmeerah"
+                    f"**{selected_text}** and particularly to someone responsible for **{role_text}**.\n\n"
+                    "Would you be open to a short conversation to see whether this is relevant to your team?\n\n"
+                    "Best,\nAmeerah"
                 )
         elif is_followup and any(x in lower for x in [
             "change", "rewrite", "revise", "improve it", "edit it"
@@ -4224,15 +6283,15 @@ elif st.session_state.page == "AI":
         elif any(x in lower for x in ["outreach", "email", "message", "write to", "draft"]):
             if any(x in lower for x in ["vet", "vets", "veterinary", "practice manager"]):
                 answer = (
-                    "**Subject: Reducing admin after veterinary consultations**\\n\\n"
-                    "Hi Practice Manager,\\n\\n"
+                    "**Subject: Reducing admin after veterinary consultations**\n\n"
+                    "Hi Practice Manager,\n\n"
                     "I’m reaching out about **VetScribe**, a tool designed to help veterinary teams turn "
                     "consultation information into structured clinical notes and clear owner summaries. "
                     "The aim is to reduce repetitive post-consultation admin while keeping the vet in control "
-                    "of reviewing and finalising the record.\\n\\n"
+                    "of reviewing and finalising the record.\n\n"
                     "I thought this could be relevant to your practice. Would you be open to a short "
-                    "conversation to see whether it could help your team?\\n\\n"
-                    "Best,\\nAmeerah"
+                    "conversation to see whether it could help your team?\n\n"
+                    "Best,\nAmeerah"
                 )
             else:
                 answer = outreach_email(
@@ -4292,34 +6351,85 @@ elif st.session_state.page == "AI":
                     "the next best action."
                 )
 
+        if attachment_note:
+            answer = answer + attachment_note
+
+        # Display only the human message text in the chat bubble; attachment names
+        # are shown separately by the uploader rather than as hidden prompt metadata.
+        display_prompt = prompt.split("\n\n[Attached demo files:", 1)[0].strip()
         st.session_state.reach_ai_messages.append(
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": display_prompt}
         )
         st.session_state.reach_ai_messages.append(
             {"role": "assistant", "content": answer}
         )
-        st.rerun()
 
-    if st.session_state.reach_ai_messages:
-        st.markdown("### Conversation")
-        for message in st.session_state.reach_ai_messages:
-            role = message.get("role", "assistant")
-            with st.chat_message(role):
-                st.markdown(message.get("content", ""))
-
-        if st.button("Clear conversation", key="reach_ai_clear"):
-            st.session_state.reach_ai_messages = []
-            st.rerun()
-    else:
-        st.caption(
-            "REACH AI uses your current product and market context automatically. "
-            "Ask a follow-up such as “make it shorter”, “make it less salesy” or "
-            "“mention that it saves time”. Portfolio demo responses are generated locally "
-            "and do not call external AI services."
+        # Save the complete thread in session state and create a compact title
+        # from the first user message, similar to a chat history sidebar.
+        active_thread = st.session_state.reach_ai_chats.setdefault(
+            active_chat_id, {"title": "New chat", "messages": []}
         )
+        active_thread["messages"] = list(st.session_state.reach_ai_messages)
+        if active_thread.get("title") in ("", "New chat"):
+            clean_title = re.sub(r"\s+", " ", prompt).strip()
+            if len(clean_title) > 34:
+                clean_title = clean_title[:34].rstrip() + "…"
+            active_thread["title"] = clean_title or "New chat"
+
+        st.rerun()
 
 elif st.session_state.page == "Research":
     app_topbar()
+    render_reach_scroll_anchor("reach-research-work")
+
+    _research_companies = st.session_state.get("market_results", [])
+    _all_names = [(c.get("company_name") or c.get("name")) for c in _research_companies if (c.get("company_name") or c.get("name"))]
+    _selected_names = st.session_state.get("research_target_names", st.session_state.get("selected_company_names", []))
+    _scope = st.session_state.get("research_scope", "selected")
+    if _scope == "selected":
+        _research_names = [n for n in _selected_names if n in _all_names]
+    else:
+        _research_names = list(_all_names)
+
+    with st.container(border=True):
+        if _scope=="selected" and _research_names:
+            st.markdown(f"### {len(_research_names)} selected organisation{'s' if len(_research_names)!=1 else ''} ready for research")
+            st.caption("REACH carried these exact companies over from Companies.")
+        else:
+            st.markdown(f"### All {len(_research_names)} discovered organisations ready for research")
+            st.caption("REACH will research the full discovered market.")
+        if _research_names:
+            st.markdown("  \n".join([f"✓ **{n}**" for n in _research_names[:10]]))
+        else:
+            st.warning("No organisations are available. Build your market first.")
+
+        _r1,_r2=st.columns(2)
+        with _r1:
+            if st.button("Use selected", key="scope_selected", use_container_width=True, disabled=not bool(_selected_names)):
+                st.session_state.research_scope="selected"; st.rerun()
+        with _r2:
+            if st.button("Use all discovered", key="scope_all", use_container_width=True):
+                st.session_state.research_scope="all"; st.rerun()
+
+    if st.session_state.get("show_research_guide", True):
+        first_time_guide(
+            "GUIDE: Research your organisations",
+            "Use this stage to understand company fit, products, pricing, decision-makers and contact routes before outreach.",
+            [
+                ("1", "Choose focus", "Select organisation fit, pricing, products, people or full research."),
+                ("2", "Add instructions", "Tell REACH anything specific you want checked."),
+                ("3", "Start research", "REACH prepares the research for the selected organisation or market."),
+                ("4", "Review findings", "Check fit, commercial intelligence and available contact routes."),
+                ("5", "Continue", "Move to People to find who you should contact next."),
+            ],
+            "show_research_guide",
+            "Research",
+        )
+    else:
+        if st.button("ⓘ Show page guide", key="show_research_guide_btn"):
+            st.session_state.show_research_guide = True
+            st.rerun()
+
     page_header(
         "RESEARCH & ENRICHMENT",
         "Research organisations",
@@ -4332,11 +6442,32 @@ elif st.session_state.page == "Research":
 
     r1, r2, r3 = st.columns(3)
     with r1:
-        st.selectbox(
+        if _scope == "selected":
+            _research_options = (
+                ["All selected organisations"] + list(_research_names)
+                if len(_research_names) > 1
+                else list(_research_names)
+            )
+        else:
+            _research_options = ["All discovered organisations"] + list(_all_names)
+
+        if not _research_options:
+            _research_options = ["No organisation selected"]
+
+        research_target = st.selectbox(
             "Research",
-            ["Selected organisation", "All discovered organisations", "Saved companies"],
+            _research_options,
             key="research_target"
         )
+
+        if research_target == "All selected organisations":
+            _active_research_names = list(_research_names)
+        elif research_target == "All discovered organisations":
+            _active_research_names = list(_all_names)
+        elif research_target in _all_names:
+            _active_research_names = [research_target]
+        else:
+            _active_research_names = []
     with r2:
         st.selectbox(
             "Depth",
@@ -4346,7 +6477,19 @@ elif st.session_state.page == "Research":
     with r3:
         st.selectbox(
             "Focus",
-            ["Organisation fit", "Decision-makers", "Contact routes", "Signals", "All"],
+            [
+                "Organisation fit",
+                "Products & services",
+                "Pricing",
+                "Competitors",
+                "Decision-makers",
+                "Contact routes",
+                "Recent activity",
+                "Technology used",
+                "Locations",
+                "Customer types",
+                "Full company research",
+            ],
             key="research_focus"
         )
 
@@ -4359,9 +6502,26 @@ elif st.session_state.page == "Research":
 
     c1, c2, c3 = st.columns(3)
     if c1.button("✦ Start research", type="primary", use_container_width=True, key="research_start"):
-        st.session_state["research_started"] = True
-        st.session_state["research_stage"] = 5
-        st.rerun()
+        if not _active_research_names:
+            st.warning("Choose at least one organisation to research.")
+        elif DEMO_MODE:
+            _instruction=st.session_state.get("research_instructions","").strip()
+            _focus=st.session_state.get("research_focus","Organisation fit")
+            _results={}
+            for _i,_name in enumerate(_active_research_names):
+                _co=next((c for c in _research_companies if (c.get("company_name") or c.get("name"))==_name),{})
+                _results[_name]=demo_instruction_result(_co,_instruction,_focus,_i)
+            st.session_state.demo_research_results=_results
+            st.session_state.pop("research_comparison_result",None)
+            st.session_state.researched_company_names=list(_active_research_names)
+            st.session_state.last_demo_research_question=_instruction or _focus
+            if st.session_state.get("reach_tour_active",False):
+                st.session_state.reach_tour_step=5
+            st.rerun()
+        else:
+            st.session_state["research_started"] = True
+            st.session_state["research_stage"] = 5
+            st.rerun()
     if c2.button("Open companies", use_container_width=True, key="research_companies"):
         nav_to("Companies")
     if c3.button("Configure enrichment", use_container_width=True, key="research_enrich"):
@@ -4398,38 +6558,152 @@ elif st.session_state.page == "Research":
                     unsafe_allow_html=True
                 )
 
-        st.markdown("### Research summary")
+    if not DEMO_MODE:
+        st.markdown("## Product & market intelligence")
+        st.caption("Private REACH can populate verified research here from connected permitted research providers and retain source URLs / timestamps.")
 
-        q1, q2, q3, q4 = st.columns(4)
-        q1.metric("Organisation", "Verified")
-        q2.metric("Market fit", "Ready to assess")
-        q3.metric("People", "Needs enrichment")
-        q4.metric("Contact routes", "Needs verification")
+    _done=st.session_state.get("demo_research_results",{})
+    if _done:
+        st.markdown("## Research results")
+        _asked=st.session_state.get("last_demo_research_question","")
+        st.info(
+            "PORTFOLIO DEMO · Sample response to your instruction"
+            + (f": “{_asked}”" if _asked else "")
+            + ". No live website, search, OpenAI, Hunter or paid research API was called."
+        )
 
-        with st.container(border=True):
-            st.markdown("#### What REACH knows")
-            if selected:
-                st.write(f"**Organisation:** {company_name(selected)}")
-                st.write(f"**Address:** {company_address(selected)}")
-                st.write(f"**Company number:** {safe(selected.get('company_number'))}")
-                score = selected.get("relevance_score")
-                if isinstance(score, (int, float)):
-                    st.write(f"**Discovery match:** {score}%")
+        # Organised company index first.
+        _names=[n for n in st.session_state.get("researched_company_names",[]) if n in _done]
+        st.markdown(f"### Organisations researched · {len(_names)}")
+        if _names:
+            _index_cols=st.columns(min(4,len(_names)))
+            for _i,_name in enumerate(_names):
+                _r=_done[_name]
+                with _index_cols[_i % len(_index_cols)]:
+                    st.markdown(
+                        f"""<div class="research-org-index">
+                        <div class="research-org-name">{_name}</div>
+                        <div class="research-org-meta">{_r['category']} · {_r['fit']}% demo fit</div>
+                        </div>""",
+                        unsafe_allow_html=True,
+                    )
+
+        st.markdown("### Findings by organisation")
+        for _name in _names:
+            _r=_done[_name]
+            with st.expander(f"{_name} · {_r['fit']}% demo fit", expanded=True):
+                _m1,_m2,_m3=st.columns(3)
+                _m1.metric("Demo fit",f"{_r['fit']}%")
+                _m2.metric("Research topics",len(_r["sections"]))
+                _m3.metric("Status","Demo complete")
+                st.caption(f"Category: {_r['category']}")
+                for _heading,_body in _r["sections"]:
+                    st.markdown(f"#### {_heading}")
+                    st.write(_body)
+
+                st.markdown("#### Next research actions")
+                st.caption("In private REACH these can be populated with sourced, permitted live research.")
+                _x1,_x2=st.columns(2)
+                _x1.write("Decision-maker roles: " + " · ".join(_r["roles"]))
+                _x2.write("Contact routes: " + " · ".join(_r["routes"]))
+
+
+        st.markdown("---")
+        st.markdown("## Compare researched organisations")
+        st.caption(
+            "Ask a question across all of the organisations in this research run. "
+            "Example: “Out of all the companies, find the roses cheaper than £70.”"
+        )
+
+        _compare_question=st.text_input(
+            "Comparison question",
+            placeholder="e.g. Out of all the companies, find the roses cheaper than £70",
+            key="research_compare_question",
+        )
+        _cc1,_cc2=st.columns([1.6,1])
+        with _cc1:
+            _compare_clicked=st.button(
+                "✦ Compare all researched companies",
+                key="compare_researched_companies",
+                type="primary",
+                use_container_width=True,
+            )
+        with _cc2:
+            if st.button("Clear comparison",key="clear_research_comparison",use_container_width=True):
+                st.session_state.pop("research_comparison_result",None)
+                st.rerun()
+
+        if _compare_clicked:
+            if len(_done)<2:
+                st.warning("Research at least two organisations before comparing them.")
+            elif not _compare_question.strip():
+                st.warning("Enter what you want REACH to compare.")
             else:
-                st.write("Choose an organisation from Companies to see its verified discovery details here.")
+                st.session_state.research_comparison_result=demo_compare_research_results(
+                    {n:_done[n] for n in _names if n in _done},
+                    _compare_question,
+                )
+                st.rerun()
+
+        _comparison=st.session_state.get("research_comparison_result")
+        if _comparison:
+            st.success(_comparison.get("summary") or "Comparison complete.")
+
+            if _comparison.get("metric")=="price":
+                _threshold=_comparison.get("threshold")
+                _rows=_comparison.get("rows",[])
+                st.markdown("### Price comparison")
+                for _rank,_row in enumerate(_rows,1):
+                    _qualifies=_row.get("qualifies",True)
+                    _badge=(
+                        f"✓ Under £{_threshold:g}" if (_threshold is not None and _qualifies)
+                        else f"✕ £{_threshold:g} or above" if _threshold is not None
+                        else f"Rank #{_rank}"
+                    )
+                    st.markdown(
+                        f"""<div class="research-compare-row">
+                        <div><b>{_rank}. {_row['company']}</b><span>{_row['subject']}</span></div>
+                        <div><b>£{_row['lowest']}</b><span>Lowest demo price</span></div>
+                        <div><b>£{_row['highest']}</b><span>Highest demo price</span></div>
+                        <div class="research-compare-badge">{_badge}</div>
+                        </div>""",
+                        unsafe_allow_html=True,
+                    )
+                if _threshold is not None:
+                    _matched=_comparison.get("matched",[])
+                    st.markdown("### Matching organisations")
+                    if _matched:
+                        for _m in _matched:
+                            st.markdown(f"✓ **{_m}**")
+                    else:
+                        st.info(f"No researched organisation has an illustrative price below £{_threshold:g}.")
+
+            elif _comparison.get("metric")=="fit":
+                st.markdown("### Ranked comparison")
+                for _rank,_row in enumerate(_comparison.get("rows",[]),1):
+                    st.markdown(
+                        f"**{_rank}. {_row['company']}** — {_row['fit']}% illustrative demo fit"
+                    )
+            else:
+                st.markdown("### Comparison overview")
+                for _row in _comparison.get("rows",[]):
+                    _price=f"£{_row['lowest']}" if _row.get("lowest") is not None else "Not researched"
+                    st.markdown(
+                        f"**{_row['company']}** — Fit {_row['fit']}% · Lowest researched price: {_price} · "
+                        f"{_row['topics']} research topics"
+                    )
 
             st.caption(
-                "REACH will add website findings, verified people and contact details here "
-                "when the corresponding permitted data providers are connected."
+                "Portfolio Demo · This comparison uses only the fictional sample research generated above. "
+                "The private REACH version can later compare sourced live findings across companies."
             )
 
-        n1, n2, n3 = st.columns(3)
-        if n1.button("Find decision-makers →", use_container_width=True, key="research_find_people"):
-            nav_to("People")
-        if n2.button("Add to outreach →", use_container_width=True, key="research_add_outreach"):
-            nav_to("Outreach")
-        if n3.button("View company profile →", use_container_width=True, key="research_profile"):
-            nav_to("Company Profile")
+        if st.button("Continue to People →",key="research_results_people",type="primary",use_container_width=True):
+            st.session_state.page="People"
+            st.session_state.reach_tour_step=5
+            st.session_state["_reach_scroll_target"]="reach-people-work"
+            st.rerun()
+
 
 elif st.session_state.page == "Automations":
     app_topbar()
@@ -4540,7 +6814,7 @@ elif st.session_state.page == "Signals":
     app_topbar()
     page_header("RESEARCH & ENRICHMENT", "Signals", "Use timely business signals to prioritise companies and make outreach more relevant.")
     st.html("""
-    <div class="workspace-tabs"><span class="workspace-tab on">All signals</span><span class="workspace-tab">Growth</span><span class="workspace-tab">Hiring</span><span class="workspace-tab">Funding</span><span class="workspace-tab">News</span><span class="workspace-tab">Technology</span></div>
+    <div class="workspace-tabs"><span class="workspace-tab on">All signals</span><span class="workspace-tab">Growth</span><span class="workspace-tab">Hiring</span><span class="workspace-tab">Funding</span><span class="workspace-tab">News</span><span class="workspace-tab"><a class="reach-card-link" href="?go=technology">Technology</a></span></div>
     <section class="surface" style="padding:20px">
       <div class="signal-row"><div class="act-icon">⚡</div><div><b>Signals will appear here</b><span>Connect permitted company/news data sources to surface meaningful buying or growth signals.</span></div><span>Data source required</span><span class="green">Connect →</span></div>
       <div class="signal-row"><div class="act-icon">✦</div><div><b>REACH AI prioritisation</b><span>Signals can later be combined with market fit and interaction history.</span></div><span>Planned</span><span>—</span></div>
@@ -4977,6 +7251,191 @@ elif st.session_state.page in ["Lists", "Saved Searches", "Emails", "Calls", "Ta
 # ============================================================
 # 09 — CLOSING / DEMO END
 # ============================================================
+
+
+# ============================================================
+# ACTIVITY DESTINATIONS — real pages for Home dashboard tabs
+# ============================================================
+
+elif st.session_state.page == "Emails":
+    app_topbar()
+    st.markdown('<div class="eyebrow">ENGAGE</div><div class="page-title">Emails</div>', unsafe_allow_html=True)
+    st.caption("Review outreach emails, drafts, sent messages and replies.")
+    e1, e2, e3, e4 = st.columns(4)
+    e1.metric("Drafts", "0"); e2.metric("Sent", "0"); e3.metric("Replies", "0"); e4.metric("Bounced", "0")
+    with st.container(border=True):
+        st.markdown("### Email activity")
+        st.info("No email activity yet. Start or prepare outreach to see messages here.")
+        if st.button("Prepare outreach →", key="emails_prepare"):
+            nav_to("Outreach")
+
+elif st.session_state.page == "Calls":
+    app_topbar()
+    st.markdown('<div class="eyebrow">ENGAGE</div><div class="page-title">Calls</div>', unsafe_allow_html=True)
+    st.caption("Track planned calls, completed calls and call outcomes.")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Planned", "0"); c2.metric("Completed", "0"); c3.metric("Follow-ups", "0")
+    with st.container(border=True):
+        st.markdown("### Call activity")
+        st.info("No calls recorded yet. Find decision-makers first, then manage call activity here.")
+        if st.button("Find decision-makers →", key="calls_people"):
+            nav_to("People")
+
+elif st.session_state.page == "Meetings":
+    app_topbar()
+    st.markdown('<div class="eyebrow">WIN DEALS</div><div class="page-title">Meetings</div>', unsafe_allow_html=True)
+    st.caption("Manage upcoming meetings and outcomes generated from your market development activity.")
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Upcoming", "0"); m2.metric("Completed", "0"); m3.metric("Follow-ups", "0")
+    with st.container(border=True):
+        st.markdown("### Meetings")
+        st.info("No meetings booked yet. Interested prospects and booked meetings will appear here.")
+        if st.button("Open pipeline →", key="meetings_pipeline"):
+            nav_to("Opportunities")
+
+elif st.session_state.page == "Conversations":
+    app_topbar()
+    st.markdown('<div class="eyebrow">WIN DEALS</div><div class="page-title">Conversations</div>', unsafe_allow_html=True)
+    st.caption("See prospect replies and active conversations in one place.")
+    v1, v2, v3 = st.columns(3)
+    v1.metric("Open conversations", "0"); v2.metric("Replies", "0"); v3.metric("Needs follow-up", "0")
+    with st.container(border=True):
+        st.markdown("### Conversation activity")
+        st.info("No replies yet. When prospects respond, their conversations will appear here.")
+        if st.button("Open outreach →", key="conversations_outreach"):
+            nav_to("Outreach")
+
+elif st.session_state.page == "Tasks":
+    app_topbar()
+    st.markdown('<div class="eyebrow">ENGAGE</div><div class="page-title">Tasks</div>', unsafe_allow_html=True)
+    st.caption("Keep research, outreach and follow-up work organised.")
+    t1, t2, t3 = st.columns(3)
+    t1.metric("Due today", "4"); t2.metric("Follow-ups", "0"); t3.metric("Completed", "0")
+    with st.container(border=True):
+        st.markdown("### Today's tasks")
+        if st.button("Review market strategy →", key="tasks_strategy", use_container_width=True):
+            nav_to("Market Strategy")
+        if st.button("Research decision-makers →", key="tasks_people", use_container_width=True):
+            nav_to("People")
+        if st.button("Prepare outreach →", key="tasks_outreach", use_container_width=True):
+            nav_to("Outreach")
+        if st.button("Review market coverage →", key="tasks_coverage", use_container_width=True):
+            nav_to("Market Coverage")
+
+
+# ============================================================
+# PUBLIC WEBSITE INFORMATION PAGES
+# ============================================================
+
+elif st.session_state.page == "Public Product":
+    if st.button("← Back to REACH", key="pub_product_back"):
+        nav_to("Landing")
+    st.markdown("""
+    <div class="public-kicker">PRODUCT</div>
+    <div class="public-title">One workspace to develop your market.</div>
+    <div class="public-lead">REACH brings market discovery, research, decision-maker discovery, outreach preparation and opportunity tracking together so teams can move from “who should we target?” to organised action.</div>
+    """, unsafe_allow_html=True)
+    p1,p2,p3 = st.columns(3)
+    for col,title,body in [
+        (p1,"Discover your market","Turn a product or service description into target segments, search terms and relevant organisations."),
+        (p2,"Research the right people","Organise company research and identify the roles and decision-makers worth reaching."),
+        (p3,"Work the opportunity","Prepare personalised outreach, track activity and move interested organisations through your pipeline.")
+    ]:
+        with col:
+            with st.container(border=True):
+                st.markdown(f"### {title}")
+                st.write(body)
+    if st.button("Open portfolio demo →", key="pub_product_demo", type="primary"):
+        nav_to("Home")
+
+elif st.session_state.page == "Public How":
+    if st.button("← Back to REACH", key="pub_how_back"):
+        nav_to("Landing")
+    st.markdown("""
+    <div class="public-kicker">HOW IT WORKS</div>
+    <div class="public-title">From a market idea to an organised pipeline.</div>
+    <div class="public-lead">REACH is designed as a connected workflow rather than a collection of disconnected lead lists.</div>
+    """, unsafe_allow_html=True)
+    steps = [
+        ("01","Understand","Describe your product, service or business. REACH turns it into a structured market strategy."),
+        ("02","Discover","Find relevant organisations and build a clearer view of the addressable market."),
+        ("03","Research","Assess fit and identify the roles and decision-makers that matter."),
+        ("04","Engage","Prepare personalised outreach and organise follow-ups."),
+        ("05","Track","Keep conversations, tasks, meetings and opportunities connected."),
+        ("06","Expand","Review coverage and continue discovering parts of the market you have not reached.")
+    ]
+    for i in range(0,6,3):
+        cols=st.columns(3)
+        for col,(num,title,body) in zip(cols,steps[i:i+3]):
+            with col:
+                with st.container(border=True):
+                    st.markdown(f"<div class='step-num'>{num}</div><h3>{title}</h3><p>{body}</p>", unsafe_allow_html=True)
+    if st.button("See REACH in action →", key="pub_how_demo", type="primary"):
+        nav_to("Home")
+
+elif st.session_state.page == "Public Solutions":
+    if st.button("← Back to REACH", key="pub_sol_back"):
+        nav_to("Landing")
+    st.markdown("""
+    <div class="public-kicker">SOLUTIONS</div>
+    <div class="public-title">Built for teams that need to find and develop opportunities.</div>
+    <div class="public-lead">The same REACH workflow can support different commercial teams without forcing them into a one-size-fits-all lead list.</div>
+    """, unsafe_allow_html=True)
+    sols = [
+        ("Business development","Map target organisations, research fit and organise outreach."),
+        ("Sales","Turn qualified market opportunities into structured prospecting and pipeline activity."),
+        ("Partnerships","Identify organisations that could become partners and track relationship development."),
+        ("Market development","Explore new segments, locations and customer groups systematically."),
+        ("Founders & small teams","Reduce manual research and keep early commercial activity organised."),
+        ("Agencies & services","Find organisations likely to need a service and prepare relevant outreach.")
+    ]
+    cols=st.columns(3)
+    for i,(title,body) in enumerate(sols):
+        with cols[i%3]:
+            with st.container(border=True):
+                st.markdown(f"### {title}")
+                st.write(body)
+    if st.button("Explore the demo →", key="pub_sol_demo", type="primary"):
+        nav_to("Home")
+
+elif st.session_state.page == "Public Resources":
+    if st.button("← Back to REACH", key="pub_res_back"):
+        nav_to("Landing")
+    st.markdown("""
+    <div class="public-kicker">RESOURCES</div>
+    <div class="public-title">See how REACH is designed to work.</div>
+    <div class="public-lead">This portfolio build demonstrates the product experience using sample data. External AI, enrichment and contact APIs are disabled in the public demo.</div>
+    """, unsafe_allow_html=True)
+    r1,r2,r3 = st.columns(3)
+    resources = [
+        ("Interactive product demo","Explore Home, Companies, People, REACH AI, outreach, tasks and pipeline workflows.","Home"),
+        ("REACH AI demo","Try the conversational market-development assistant without paid external AI calls.","AI"),
+        ("Market workflow","See how market strategy, discovery and company research connect.","Market Strategy")
+    ]
+    for col,(title,body,dest) in zip([r1,r2,r3],resources):
+        with col:
+            with st.container(border=True):
+                st.markdown(f"### {title}")
+                st.write(body)
+                if st.button("Open →", key=f"resource_{dest}"):
+                    nav_to(dest)
+
+elif st.session_state.page == "Public Pricing":
+    if st.button("← Back to REACH", key="pub_price_back"):
+        nav_to("Landing")
+    st.markdown("""
+    <div class="public-kicker">PRICING</div>
+    <div class="public-title">REACH is currently a portfolio product demo.</div>
+    <div class="public-lead">Commercial pricing has not been launched. The public version is available to explore as a demonstration of the product and its workflows.</div>
+    """, unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown("## Portfolio Demo")
+        st.markdown("### Free to explore")
+        st.write("Sample market-development workflow • Sample data • REACH AI demo • Company and people views • Outreach and pipeline experience")
+        st.caption("No paid OpenAI, Hunter, Companies House or enrichment calls are triggered by this public demo.")
+        if st.button("Open portfolio demo →", key="pub_price_demo", type="primary"):
+            nav_to("Home")
+    st.info("Future commercial plans and pricing would be defined before a production launch; this page does not advertise a live paid plan.")
 
 elif st.session_state.page == "Closing":
     app_topbar()
